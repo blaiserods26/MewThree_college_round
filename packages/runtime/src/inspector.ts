@@ -1,0 +1,200 @@
+import type { TargetFingerprint } from "@patchwork/contracts";
+
+const AMBIGUOUS_CONTAINER_TAGS = new Set(["HTML", "BODY", "MAIN", "SECTION", "HEADER", "FOOTER"]);
+const AMBIGUOUS_CLASSES = new Set(["storefront-app", "store-main", "catalog-grid", "container"]);
+
+/**
+ * Checks whether an element is an overly broad or ambiguous container.
+ */
+export function isAmbiguousContainer(element: Element): boolean {
+  if (AMBIGUOUS_CONTAINER_TAGS.has(element.tagName.toUpperCase())) {
+    return true;
+  }
+  for (const cls of AMBIGUOUS_CLASSES) {
+    if (element.classList && element.classList.contains(cls)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Generates a deterministic unique CSS selector for an element.
+ */
+export function generateElementSelector(element: Element): string {
+  if (element.id) {
+    return `#${element.id}`;
+  }
+
+  const tag = element.tagName.toLowerCase();
+  const parent = element.parentElement;
+
+  if (parent && parent.id) {
+    return `#${parent.id} > ${tag}`;
+  }
+
+  if (element.className && typeof element.className === "string") {
+    const classes = element.className
+      .trim()
+      .split(/\s+/)
+      .filter((c) => c && !c.startsWith("patchwork-"));
+    if (classes.length > 0) {
+      return `${tag}.${classes[0]}`;
+    }
+  }
+
+  return tag;
+}
+
+/**
+ * Extracts a TargetFingerprint from a DOM element.
+ */
+export function extractTargetFingerprint(element: Element): TargetFingerprint {
+  const tag = element.tagName.toLowerCase();
+  const role = element.getAttribute("role") || (tag === "button" ? "button" : tag === "a" ? "link" : undefined);
+  const accessibleName =
+    element.getAttribute("aria-label") ||
+    element.getAttribute("aria-labelledby") ||
+    element.getAttribute("title") ||
+    (element.textContent || "").trim().substring(0, 50) ||
+    undefined;
+
+  const text = (element.textContent || "").trim().substring(0, 80) || undefined;
+  const parentContext = element.parentElement?.id || element.parentElement?.className || undefined;
+  const selector = generateElementSelector(element);
+
+  const stableAttributes: Record<string, string> = {};
+  if (element.getAttribute("name")) stableAttributes["name"] = element.getAttribute("name")!;
+  if (element.getAttribute("type")) stableAttributes["type"] = element.getAttribute("type")!;
+  if (element.getAttribute("data-testid")) stableAttributes["data-testid"] = element.getAttribute("data-testid")!;
+
+  return {
+    tag,
+    role,
+    accessibleName,
+    text,
+    parentContext,
+    selector,
+    stableAttributes: Object.keys(stableAttributes).length > 0 ? stableAttributes : undefined,
+  };
+}
+
+export interface InspectorOptions {
+  doc?: Document;
+  win?: Window;
+  onSelect?: (fingerprint: TargetFingerprint) => void;
+}
+
+export function initVisualInspector(options: InspectorOptions = {}) {
+  const doc = options.doc || document;
+  const win = options.win || window;
+
+  let activeHighlight: HTMLElement | null = null;
+  let activeTooltip: HTMLElement | null = null;
+  let isEnabled = false;
+
+  function createOverlayElements() {
+    if (!activeHighlight) {
+      activeHighlight = doc.createElement("div");
+      activeHighlight.id = "patchwork-inspector-outline";
+      activeHighlight.style.cssText =
+        "position: absolute; pointer-events: none; border: 2px solid #6366f1; background: rgba(99, 102, 241, 0.15); z-index: 999998; border-radius: 4px; display: none; transition: all 0.05s ease;";
+      doc.body.appendChild(activeHighlight);
+    }
+    if (!activeTooltip) {
+      activeTooltip = doc.createElement("div");
+      activeTooltip.id = "patchwork-inspector-tooltip";
+      activeTooltip.style.cssText =
+        "position: absolute; pointer-events: none; background: #0f1523; color: #f8fafc; font-family: monospace; font-size: 11px; padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.15); z-index: 999999; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.4);";
+      doc.body.appendChild(activeTooltip);
+    }
+  }
+
+  function handleMouseMove(e: MouseEvent) {
+    if (!isEnabled) return;
+    const target = e.target as HTMLElement | null;
+    if (!target || isAmbiguousContainer(target) || target.id?.startsWith("patchwork-")) {
+      if (activeHighlight) activeHighlight.style.display = "none";
+      if (activeTooltip) activeTooltip.style.display = "none";
+      return;
+    }
+
+    const rect = target.getBoundingClientRect();
+    const scrollX = win.scrollX || 0;
+    const scrollY = win.scrollY || 0;
+
+    if (activeHighlight) {
+      activeHighlight.style.display = "block";
+      activeHighlight.style.top = `${rect.top + scrollY}px`;
+      activeHighlight.style.left = `${rect.left + scrollX}px`;
+      activeHighlight.style.width = `${rect.width}px`;
+      activeHighlight.style.height = `${rect.height}px`;
+    }
+
+    if (activeTooltip) {
+      activeTooltip.style.display = "block";
+      activeTooltip.style.top = `${Math.max(0, rect.top + scrollY - 26)}px`;
+      activeTooltip.style.left = `${rect.left + scrollX}px`;
+      const selector = generateElementSelector(target);
+      activeTooltip.textContent = `<${target.tagName.toLowerCase()}> ${selector}`;
+    }
+  }
+
+  function handleClick(e: MouseEvent) {
+    if (!isEnabled) return;
+    const target = e.target as HTMLElement | null;
+    if (!target || isAmbiguousContainer(target) || target.id?.startsWith("patchwork-")) {
+      return;
+    }
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const fingerprint = extractTargetFingerprint(target);
+
+    // Call callback if provided
+    if (options.onSelect) {
+      options.onSelect(fingerprint);
+    }
+
+    // Broadcast via postMessage to parent/opener dashboard
+    const targetWindow = win.opener || (win.parent !== win ? win.parent : null);
+    if (targetWindow) {
+      targetWindow.postMessage(
+        {
+          type: "PATCHWORK_ELEMENT_SELECTED",
+          fingerprint,
+        },
+        "*"
+      );
+    }
+
+    // Deactivate inspector on selection
+    toggleInspector(false);
+  }
+
+  function toggleInspector(enable?: boolean) {
+    isEnabled = enable !== undefined ? enable : !isEnabled;
+    createOverlayElements();
+
+    if (isEnabled) {
+      doc.addEventListener("mousemove", handleMouseMove, true);
+      doc.addEventListener("click", handleClick, true);
+    } else {
+      doc.removeEventListener("mousemove", handleMouseMove, true);
+      doc.removeEventListener("click", handleClick, true);
+      if (activeHighlight) activeHighlight.style.display = "none";
+      if (activeTooltip) activeTooltip.style.display = "none";
+    }
+    return isEnabled;
+  }
+
+  // Listen for activation messages from dashboard
+  win.addEventListener("message", (msg) => {
+    if (msg.data && msg.data.type === "PATCHWORK_TOGGLE_INSPECTOR") {
+      toggleInspector(Boolean(msg.data.enabled));
+    }
+  });
+
+  return { toggleInspector };
+}

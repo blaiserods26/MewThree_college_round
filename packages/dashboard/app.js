@@ -28,8 +28,33 @@
 
   const auditTimelineList = document.getElementById("audit-timeline-list");
 
-  const newPatchModal = document.getElementById("new-patch-modal");
-  const createPatchBtn = document.getElementById("create-patch-btn");
+  const openInspectorBtn = document.getElementById("open-inspector-btn");
+
+  // Visual Inspector Bridge
+  let inspectorWindow = null;
+  if (openInspectorBtn) {
+    openInspectorBtn.addEventListener("click", () => {
+      inspectorWindow = window.open("http://localhost:3000", "PatchworkInspector");
+      showToast("Storefront opened. Click an element to capture its fingerprint.", "info");
+      setTimeout(() => {
+        if (inspectorWindow) {
+          inspectorWindow.postMessage({ type: "PATCHWORK_TOGGLE_INSPECTOR", enabled: true }, "*");
+        }
+      }, 1000);
+    });
+  }
+
+  window.addEventListener("message", (msg) => {
+    if (msg.data && msg.data.type === "PATCHWORK_ELEMENT_SELECTED") {
+      const fp = msg.data.fingerprint;
+      if (!fp) return;
+      document.getElementById("patch-selector-input").value = fp.selector || "";
+      document.getElementById("patch-tag-input").value = fp.tag || "button";
+      document.getElementById("patch-name-input").value = `Patch for <${fp.tag}> ${fp.selector}`;
+      newPatchModal.classList.remove("hidden");
+      showToast(`Captured target element: ${fp.selector}`, "success");
+    }
+  });
   const closeModalBtn = document.getElementById("close-modal-btn");
   const cancelNewPatchBtn = document.getElementById("cancel-new-patch-btn");
   const newPatchForm = document.getElementById("new-patch-form");

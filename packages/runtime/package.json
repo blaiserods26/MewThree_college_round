@@ -1,9 +1,15 @@
 {
   "name": "@patchwork/runtime",
   "version": "0.1.0",
-  "private": true,
-  "description": "PATCHWORK client runtime: zero-dependency script injected into target website to apply patches safely",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "echo \"Runtime stub ready for Phase 2/3\""
+    "build": "tsc && bun build src/index.ts --outfile dist/patchwork.js",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@patchwork/contracts": "*"
   }
 }

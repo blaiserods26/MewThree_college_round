@@ -6,8 +6,8 @@
 
 **Status:** ready-for-agent
 
-- [ ] Implement secure `postMessage` communication bridge between storefront and dashboard.
-- [ ] Automatically populate the patch creation form in the dashboard when an element is picked in the inspector.
-- [ ] Provide interactive operation authoring UI for all allowlisted mutation types.
-- [ ] Display computed before/after values to let operators verify the modification.
-- [ ] Save the completed draft patch to `POST /api/patches` and refresh the patch explorer.
+- [x] Implement secure `postMessage` communication bridge between storefront and dashboard.
+- [x] Automatically populate the patch creation form in the dashboard when an element is picked in the inspector.
+- [x] Provide interactive operation authoring UI for all allowlisted mutation types.
+- [x] Display computed before/after values to let operators verify the modification.
+- [x] Save the completed draft patch to `POST /api/patches` and refresh the patch explorer.

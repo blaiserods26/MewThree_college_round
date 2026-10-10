@@ -6,8 +6,8 @@
 
 **Status:** ready-for-agent
 
-- [ ] Implement backend bundle fetching reading `data-website-id` from the host script tag.
-- [ ] Implement preview mode detection via `?patchwork_preview=<patchId>` query parameter.
-- [ ] Fetch isolated draft patch payload from backend preview endpoint without triggering production bundle mutations.
-- [ ] Render a non-intrusive floating indicator badge ("PATCHWORK PREVIEW MODE") on the host viewport.
-- [ ] Add tests verifying that preview parameters apply isolated draft patches while standard sessions apply only published releases.
+- [x] Implement backend bundle fetching reading `data-website-id` from the host script tag.
+- [x] Implement preview mode detection via `?patchwork_preview=<patchId>` query parameter.
+- [x] Fetch isolated draft patch payload from backend preview endpoint without triggering production bundle mutations.
+- [x] Render a non-intrusive floating indicator badge ("PATCHWORK PREVIEW MODE") on the host viewport.
+- [x] Add tests verifying that preview parameters apply isolated draft patches while standard sessions apply only published releases.

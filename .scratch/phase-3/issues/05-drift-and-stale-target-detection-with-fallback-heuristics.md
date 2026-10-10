@@ -6,8 +6,8 @@
 
 **Status:** ready-for-agent
 
-- [ ] Implement fingerprint heuristic scoring to locate mutated elements when the primary selector returns null.
-- [ ] Calculate confidence scores based on tag match, accessible role, text similarity, and parent context.
-- [ ] Transition patch to `stale` status via API endpoint when drift threshold is triggered.
-- [ ] Safe failure mode: abort patch application gracefully without throwing exceptions or corrupting the host page.
-- [ ] Add automated tests simulating DOM restructuring and verifying stale status reporting.
+- [x] Implement fingerprint heuristic scoring to locate mutated elements when the primary selector returns null.
+- [x] Calculate confidence scores based on tag match, accessible role, text similarity, and parent context.
+- [x] Transition patch to `stale` status via API endpoint when drift threshold is triggered.
+- [x] Safe failure mode: abort patch application gracefully without throwing exceptions or corrupting the host page.
+- [x] Add automated tests simulating DOM restructuring and verifying stale status reporting.

@@ -6,9 +6,9 @@
 
 **Status:** ready-for-agent
 
-- [ ] Implement DOM element resolution using primary selector and fallback fingerprint attributes.
-- [ ] Implement strict operation validation against allowlist (`style.set`, `text.set`, `attribute.set`, `element.hide`, `element.show`).
-- [ ] Implement uniqueness verification to prevent applying patches to ambiguous multi-element matches.
-- [ ] Record original element state prior to mutation to enable clean, deterministic reversals.
-- [ ] Apply patches in deterministic order and emit structured event logs (`applied`, `skipped`, `stale`, `failed`).
-- [ ] Add automated unit tests verifying safe mutation application, reversibility, and forbidden operation rejection.
+- [x] Implement DOM element resolution using primary selector and fallback fingerprint attributes.
+- [x] Implement strict operation validation against allowlist (`style.set`, `text.set`, `attribute.set`, `element.hide`, `element.show`).
+- [x] Implement uniqueness verification to prevent applying patches to ambiguous multi-element matches.
+- [x] Record original element state prior to mutation to enable clean, deterministic reversals.
+- [x] Apply patches in deterministic order and emit structured event logs (`applied`, `skipped`, `stale`, `failed`).
+- [x] Add automated unit tests verifying safe mutation application, reversibility, and forbidden operation rejection.

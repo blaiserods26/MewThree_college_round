@@ -6,9 +6,9 @@
 
 **Status:** ready-for-agent
 
-- [ ] Implement toggleable inspector overlay mode on the storefront page.
-- [ ] Render element highlight box following the pointer across interactive DOM elements.
-- [ ] Display an informative floating badge with `<tag>`, role, text, and computed selector.
-- [ ] Guard against accidental selection of ambiguous container elements (`body`, `main`, `.catalog-grid`).
-- [ ] Compute and export a canonical `TargetFingerprint` object on element selection.
-- [ ] Add unit tests verifying fingerprint extraction and selector generation.
+- [x] Implement toggleable inspector overlay mode on the storefront page.
+- [x] Render element highlight box following the pointer across interactive DOM elements.
+- [x] Display an informative floating badge with `<tag>`, role, text, and computed selector.
+- [x] Guard against accidental selection of ambiguous container elements (`body`, `main`, `.catalog-grid`).
+- [x] Compute and export a canonical `TargetFingerprint` object on element selection.
+- [x] Add unit tests verifying fingerprint extraction and selector generation.
