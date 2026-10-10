@@ -12,7 +12,7 @@
     <header class="app-header">
       <div class="header-left">
         <div class="brand">
-          <div class="brand-glyph">⬡</div>
+          <div class="brand-glyph"><i data-lucide="hexagon"></i></div>
           <div class="brand-info">
             <h1 class="brand-title">PATCHWORK</h1>
             <span class="brand-tagline">Autonomous DOM Patching & Verification</span>
@@ -32,13 +32,13 @@
           <span id="connection-status-text">Engine Online (Port 4000)</span>
         </div>
         <button id="open-inspector-btn" class="btn btn-secondary" type="button">
-          🔍 Visual Inspector
+          <i data-lucide="search" style="width:16px;height:16px;"></i> Visual Inspector
         </button>
         <button id="open-ai-copilot-btn" class="btn btn-ai" type="button">
-          ✨ AI Hotfix Copilot
+          <i data-lucide="sparkles" style="width:16px;height:16px;"></i> AI Hotfix Copilot
         </button>
         <button id="create-patch-btn" class="btn btn-primary" type="button">
-          + New Patch Draft
+          <i data-lucide="plus-circle" style="width:16px;height:16px;"></i> New Patch Draft
         </button>
       </div>
     </header>
@@ -46,17 +46,17 @@
     <!-- Main Navigation Tabs -->
     <nav class="nav-tabs">
       <button id="tab-patches" class="tab-btn active" type="button" data-tab="patches">
-        <span class="tab-icon">📑</span>
+        <span class="tab-icon"><i data-lucide="file-text"></i></span>
         <span>Patch Explorer</span>
         <span id="patches-counter-badge" class="count-pill">0</span>
       </button>
       <button id="tab-releases" class="tab-btn" type="button" data-tab="releases">
-        <span class="tab-icon">🚀</span>
+        <span class="tab-icon"><i data-lucide="rocket"></i></span>
         <span>Releases & Rollback</span>
         <span id="releases-counter-badge" class="count-pill">0</span>
       </button>
       <button id="tab-audit" class="tab-btn" type="button" data-tab="audit">
-        <span class="tab-icon">📜</span>
+        <span class="tab-icon"><i data-lucide="scroll-text"></i></span>
         <span>Audit Trail</span>
         <span id="audit-counter-badge" class="count-pill">0</span>
       </button>
@@ -93,7 +93,7 @@
           <div class="pane-detail">
             <div id="patch-detail-container" class="detail-wrapper">
               <div class="empty-detail-placeholder">
-                <span class="placeholder-icon">👈</span>
+                <span class="placeholder-icon"><i data-lucide="arrow-left"></i></span>
                 <p>Select a patch from the list to inspect its target fingerprint, operation, and version history.</p>
               </div>
             </div>
@@ -110,7 +110,7 @@
               <p style="font-size: 0.85rem; color: var(--text-faint); margin: 0;">Bundle verified patches into immutable, versioned production releases with instant 1-click rollback.</p>
             </div>
             <button id="open-release-modal-btn" class="btn btn-primary" type="button" style="display: flex; align-items: center; gap: 8px;">
-              🚀 + Create Release Bundle
+              <i data-lucide="rocket" style="width:16px;height:16px;"></i> Create Release Bundle
             </button>
           </div>
 
@@ -125,7 +125,7 @@
             </div>
             <div class="active-release-actions">
               <button id="trigger-rollback-btn" class="btn btn-danger" type="button">
-                ⚡ Rollback to Previous Release
+                <i data-lucide="zap" style="width:16px;height:16px;"></i> Rollback to Previous Release
               </button>
             </div>
           </div>
@@ -234,7 +234,7 @@
           <div class="modal-footer">
             <button id="cancel-release-modal-btn" class="btn btn-secondary" type="button">Cancel</button>
             <button id="submit-release-bundle-btn" class="btn btn-primary" type="submit" disabled>
-              🚀 Publish Release Bundle
+              <i data-lucide="rocket" style="width:16px;height:16px;"></i> Publish Release Bundle
             </button>
           </div>
         </form>
@@ -246,7 +246,7 @@
       <div class="modal-dialog" style="max-width: 620px;">
         <div class="modal-header">
           <div style="display: flex; align-items: center; gap: 8px;">
-            <span class="ai-pill">✨ Copilot</span>
+            <span class="ai-pill"><i data-lucide="sparkles" style="width:14px;height:14px;"></i> Copilot</span>
             <h3 class="modal-title" style="margin: 0;">Natural-Language Hotfix</h3>
           </div>
           <button id="close-ai-copilot-btn" class="modal-close" type="button">×</button>
@@ -270,7 +270,7 @@
 
           <div style="display: flex; justify-content: flex-end;">
             <button id="ai-generate-btn" class="btn btn-ai" type="button">
-              ✨ Generate Patch Proposal
+              <i data-lucide="sparkles" style="width:16px;height:16px;"></i> Generate Patch Proposal
             </button>
           </div>
 
@@ -321,7 +321,7 @@
           <div class="modal-footer">
             <button id="cancel-ai-copilot-btn" class="btn btn-secondary" type="button">Cancel</button>
             <button id="accept-ai-proposal-btn" class="btn btn-primary" type="button" disabled>
-              💾 Save as Draft Patch
+              <i data-lucide="save" style="width:16px;height:16px;"></i> Save as Draft Patch
             </button>
           </div>
         </form>
@@ -332,6 +332,10 @@
     <div id="toast-container" class="toast-stack"></div>
   </div>
 
+  <!-- Animations & Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  
   <script src="config.js"></script>
   <script src="app.js"></script>
 </body>

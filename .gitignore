@@ -1,5 +1,5 @@
 # ==============================================================================
-# PATCHWORK — Git Ignore Configuration
+# PATCHWORK — Git Ignore Configuration (Enterprise)
 # ==============================================================================
 
 # Dependencies
@@ -20,6 +20,10 @@ build/
 *.env
 !.env.example
 
+# Supabase Local
+supabase/.temp/
+supabase/.branch/
+
 # Runtime Databases & Local State
 data/
 **/data/
@@ -33,6 +37,7 @@ coverage/
 test-results/
 playwright-report/
 .playwright/
+blob-report/
 
 # Logs & Temporary Files
 *.log
@@ -42,6 +47,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 .cache/
+.scratch/
 
 # OS Specific
 .DS_Store

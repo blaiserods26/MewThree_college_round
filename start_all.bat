@@ -1,21 +1,20 @@
 @echo off
-setlocal
-title PATCHWORK Platform Launcher
+setlocal enabledelayedexpansion
+title PATCHWORK Platform Launcher (Enterprise)
 
 echo ===============================================================================
-echo   PATCHWORK -- DOM Hotfix Engine and Governance Platform
-echo   One-Click System Launcher (Windows)
+echo   PATCHWORK -- DOM Hotfix Engine ^& Governance Platform
+echo   Enterprise Edition System Launcher
 echo ===============================================================================
 echo.
 
 cd /d "%~dp0"
 
-REM 1. Verify Node.js and npm
+:: 1. Verify Node.js and npm
 where node >nul 2>nul
 if %ERRORLEVEL% neq 0 (
     echo [ERROR] Node.js was not found in your PATH.
     echo Please install Node.js v20+ from https://nodejs.org and try again.
-    echo.
     pause
     exit /b 1
 )
@@ -23,12 +22,11 @@ if %ERRORLEVEL% neq 0 (
 where npm >nul 2>nul
 if %ERRORLEVEL% neq 0 (
     echo [ERROR] npm was not found in your PATH.
-    echo.
     pause
     exit /b 1
 )
 
-REM 2. Ensure .env exists
+:: 2. Ensure .env exists
 if not exist "%~dp0.env" (
     echo [*] .env file not found. Creating .env from .env.example...
     copy "%~dp0.env.example" "%~dp0.env" >nul
@@ -37,46 +35,48 @@ if not exist "%~dp0.env" (
     echo [*] Loaded configuration from .env
 )
 
-REM 3. Verify dependencies
+:: 3. Verify dependencies
 if not exist "%~dp0node_modules" (
-    echo [*] Installing workspace dependencies...
+    echo [*] Installing workspace dependencies (npm install)...
     call npm install
     if %ERRORLEVEL% neq 0 (
         echo [ERROR] Failed to install dependencies.
         pause
         exit /b 1
     )
+    
+    echo [*] Installing Playwright Browsers...
+    call npx playwright install chromium
 )
 
-REM 4. Verify build artifacts
+:: 4. Verify build artifacts
 if not exist "%~dp0packages\server\dist" (
-    echo [*] Compiling TypeScript workspaces...
+    echo [*] Compiling TypeScript workspaces (npm run build)...
     call npm run build
     if %ERRORLEVEL% neq 0 (
         echo [ERROR] Workspace compilation failed.
         pause
         exit /b 1
     )
-) else (
     echo [*] Compiled build artifacts verified.
 )
 
-REM 5. Seed demo database baseline
+:: 5. Seed demo database baseline
 echo [*] Seeding demo database to clean baseline...
 call npm run demo:reset
 
-REM 6. Launch the three services in dedicated console windows
+:: 6. Launch the services in dedicated console windows
 echo.
-echo [*] Launching API Server on http://localhost:4000...
+echo [*] Launching Real-Time API Server (Node/Fastify/WebSockets) on Port 4000...
 start "PATCHWORK API Server [Port 4000]" cmd /k "title PATCHWORK API Server [Port 4000] && cd /d "%~dp0" && npm run start --workspace=packages/server"
 
-echo [*] Launching Host Storefront on http://localhost:3000...
+echo [*] Launching Host Storefront (Demo Site) on Port 3000...
 start "PATCHWORK Storefront [Port 3000]" cmd /k "title PATCHWORK Storefront [Port 3000] && cd /d "%~dp0" && npm run start --workspace=packages/storefront"
 
-echo [*] Launching Operator Dashboard on http://localhost:5173...
+echo [*] Launching Operator Dashboard (Vite/React) on Port 5173...
 start "PATCHWORK Dashboard [Port 5173]" cmd /k "title PATCHWORK Dashboard [Port 5173] && cd /d "%~dp0" && npm run start --workspace=packages/dashboard"
 
-REM 7. Wait briefly for sockets and open browser
+:: 7. Wait briefly for sockets and open browser
 echo.
 echo [*] Waiting 3 seconds for HTTP listeners to initialize...
 ping 127.0.0.1 -n 4 >nul

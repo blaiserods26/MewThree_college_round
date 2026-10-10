@@ -5,6 +5,13 @@
   const STOREFRONT_URL = CONFIG.storefrontUrl || "http://localhost:3000";
   const STATE_KEY = "patchwork.dashboard.state.v1";
 
+  // Auto-initialize Lucide icons for dynamically injected DOM elements
+  setInterval(() => {
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+  }, 250);
+
   // Network failures surface as a bare "Failed to fetch"; replace with an actionable message.
   const rawFetch = window.fetch.bind(window);
   function fetch(input, init) {
@@ -56,7 +63,7 @@
   function renderErrorState(container, message, retry) {
     container.innerHTML = `
       <div class="empty-state error-state" role="alert">
-        <div>⚠️ ${escapeHtml(message)}</div>
+        <div><i data-lucide='alert-triangle' style='width:16px;height:16px;color:#fbbf24;vertical-align:text-bottom;'></i> ${escapeHtml(message)}</div>
         <button type="button" class="btn btn-secondary retry-btn" style="margin-top: 12px;">Retry</button>
       </div>`;
     const btn = container.querySelector(".retry-btn");
@@ -143,7 +150,7 @@
   function showToast(message, type = "info") {
     const toast = document.createElement("div");
     toast.className = `toast toast-${type}`;
-    const icon = type === "success" ? "✅" : type === "error" ? "❌" : "ℹ️";
+    const icon = type === "success" ? "<i data-lucide='check-circle' style='width:16px;height:16px;color:#4ade80;vertical-align:text-bottom;'></i>" : type === "error" ? "<i data-lucide='x-circle' style='width:16px;height:16px;color:#f87171;vertical-align:text-bottom;'></i>" : "ℹ️";
     toast.innerHTML = `<span>${icon}</span> <span class="toast-message"></span>`;
     toast.querySelector(".toast-message").textContent = message;
     toastContainer.appendChild(toast);
@@ -288,10 +295,10 @@
       <div class="conflict-card" id="conflict-resolution-card">
         <div class="conflict-header">
           <div class="conflict-title">
-            <span>⚠️ Multi-Patch Collision Warning: Overlapping Mutation Detected</span>
+            <span><i data-lucide='alert-triangle' style='width:16px;height:16px;color:#fbbf24;vertical-align:text-bottom;'></i> Multi-Patch Collision Warning: Overlapping Mutation Detected</span>
           </div>
           <span class="conflict-badge">
-            ⚡ Error • Release Blocked
+            <i data-lucide='zap' style='width:14px;height:14px;vertical-align:text-bottom;'></i> Error • Release Blocked
           </span>
         </div>
 
@@ -363,10 +370,10 @@
       <div class="drift-card" id="drift-recovery-card">
         <div class="drift-header">
           <div class="drift-title">
-            <span>⚠️ DOM Target Drift Detected</span>
+            <span><i data-lucide='alert-triangle' style='width:16px;height:16px;color:#fbbf24;vertical-align:text-bottom;'></i> DOM Target Drift Detected</span>
           </div>
           <span class="confidence-badge confidence-high">
-            ⚡ 93% • High Confidence Match
+            <i data-lucide='zap' style='width:14px;height:14px;vertical-align:text-bottom;'></i> 93% • High Confidence Match
           </span>
         </div>
 
@@ -420,7 +427,7 @@
 
         <div style="margin-bottom: 12px; display: flex; gap: 8px;">
           <button class="btn btn-ai" id="btn-ai-disambiguate" type="button" style="display: flex; align-items: center; gap: 6px;">
-            ✨ Disambiguate Drift with AI
+            <i data-lucide='sparkles' style='width:14px;height:14px;vertical-align:text-bottom;'></i> Disambiguate Drift with AI
           </button>
         </div>
         <div id="ai-disambiguation-container"></div>
@@ -452,7 +459,7 @@
           </div>
           <div style="display: flex; gap: 8px;">
             <button class="btn btn-primary" id="btn-run-verify" style="display: flex; align-items: center; gap: 6px;">
-              ⚡ Run Verification
+              <i data-lucide='zap' style='width:14px;height:14px;vertical-align:text-bottom;'></i> Run Verification
             </button>
             <button class="btn btn-secondary" id="btn-demo-failing-verify" title="Creates and runs a broken patch to prove gate rejection">
               🧪 Test Failing Gate
@@ -462,16 +469,16 @@
 
         ${
           activeConflict || patch.status === "conflict"
-            ? `<div class="gate-notice blocked">⛔ Release Gate Blocked: Unresolved collision detected on target '${activeConflict ? activeConflict.targetSelector : patch.targetFingerprint.selector}'. This patch cannot be deployed until conflicts are resolved.</div>`
+            ? `<div class="gate-notice blocked"><i data-lucide='ban' style='width:16px;height:16px;vertical-align:text-bottom;'></i> Release Gate Blocked: Unresolved collision detected on target '${activeConflict ? activeConflict.targetSelector : patch.targetFingerprint.selector}'. This patch cannot be deployed until conflicts are resolved.</div>`
             : patch.status === "verified"
-            ? `<div class="gate-notice success">🛡️ Verification Passed: Patch verified across Desktop & Mobile. Safe for production deployment.</div>`
+            ? `<div class="gate-notice success"><i data-lucide='shield-check' style='width:16px;height:16px;vertical-align:text-bottom;'></i> Verification Passed: Patch verified across Desktop & Mobile. Safe for production deployment.</div>`
             : patch.status === "verification_failed" || (latestRun && latestRun.status === "failed")
             ? `<div class="gate-notice blocked">
-                ⛔ Release Gate Blocked: Automated browser verification failed. This patch cannot be deployed until assertions pass.
+                <i data-lucide='ban' style='width:16px;height:16px;vertical-align:text-bottom;'></i> Release Gate Blocked: Automated browser verification failed. This patch cannot be deployed until assertions pass.
                 ${latestRun?.error ? `<br><small style="margin-top: 4px; display: block; font-family: var(--font-mono);">${latestRun.error}</small>` : ""}
                 <div style="margin-top: 10px;">
                   <button class="btn btn-ai" id="btn-ai-explain-verify" type="button" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; padding: 6px 12px;">
-                    ✨ Explain Failure with AI
+                    <i data-lucide='sparkles' style='width:14px;height:14px;vertical-align:text-bottom;'></i> Explain Failure with AI
                   </button>
                 </div>
               </div>`
@@ -746,7 +753,7 @@
         const container = patchDetailContainer.querySelector("#ai-verification-explanation-container");
         try {
           btnAiExplain.disabled = true;
-          btnAiExplain.innerHTML = "✨ Diagnosing Failure...";
+          btnAiExplain.innerHTML = "<i data-lucide='sparkles' style='width:14px;height:14px;vertical-align:text-bottom;'></i> Diagnosing Failure...";
           showToast("Querying AI Root-Cause Explainer...", "info");
           const res = await fetch(`${API_BASE}/ai/explain-verification`, {
             method: "POST",
@@ -767,7 +774,7 @@
               <div class="ai-card" style="margin-top: 8px;">
                 <div class="ai-header">
                   <div style="display: flex; align-items: center; gap: 8px;">
-                    <span class="ai-pill">✨ AI Root Cause Analysis</span>
+                    <span class="ai-pill"><i data-lucide='sparkles' style='width:14px;height:14px;vertical-align:text-bottom;'></i> AI Root Cause Analysis</span>
                     <span class="count-pill" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">${Math.round(expl.confidence * 100)}% Confidence</span>
                   </div>
                 </div>
@@ -793,7 +800,7 @@
           showToast(err.message, "error");
         } finally {
           btnAiExplain.disabled = false;
-          btnAiExplain.innerHTML = "✨ Explain Failure with AI";
+          btnAiExplain.innerHTML = "<i data-lucide='sparkles' style='width:14px;height:14px;vertical-align:text-bottom;'></i> Explain Failure with AI";
         }
       });
     }
@@ -805,7 +812,7 @@
         const container = patchDetailContainer.querySelector("#ai-disambiguation-container");
         try {
           btnAiDisambiguate.disabled = true;
-          btnAiDisambiguate.innerHTML = "✨ Analyzing Candidates...";
+          btnAiDisambiguate.innerHTML = "<i data-lucide='sparkles' style='width:14px;height:14px;vertical-align:text-bottom;'></i> Analyzing Candidates...";
           showToast("Querying AI semantic disambiguation...", "info");
           const candidates = [
             { selector: "#pay-now-action", text: "Continue to Checkout (Pay Now) →", tag: "button" },
@@ -830,7 +837,7 @@
               <div class="ai-card" style="margin-top: 8px;">
                 <div class="ai-header">
                   <div style="display: flex; align-items: center; gap: 8px;">
-                    <span class="ai-pill">✨ Semantic Recovery Proposal</span>
+                    <span class="ai-pill"><i data-lucide='sparkles' style='width:14px;height:14px;vertical-align:text-bottom;'></i> Semantic Recovery Proposal</span>
                     <span class="count-pill" style="background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.4);">${Math.round(dis.confidence * 100)}% Confidence</span>
                   </div>
                 </div>
@@ -840,7 +847,7 @@
                 <div style="font-size: 0.82rem; color: #cbd5e1; margin-bottom: 8px;">
                   ${escapeHtml(dis.rationale)}
                 </div>
-                ${dis.tradeoffs ? `<div style="font-size: 0.8rem; color: #f59e0b; margin-bottom: 10px;">⚠️ Tradeoffs: ${escapeHtml(dis.tradeoffs)}</div>` : ""}
+                ${dis.tradeoffs ? `<div style="font-size: 0.8rem; color: #f59e0b; margin-bottom: 10px;"><i data-lucide='alert-triangle' style='width:16px;height:16px;color:#fbbf24;vertical-align:text-bottom;'></i> Tradeoffs: ${escapeHtml(dis.tradeoffs)}</div>` : ""}
                 <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
                   <button type="button" class="btn btn-secondary" id="btn-apply-ai-selector" style="font-size: 0.8rem; padding: 4px 10px;">
                     📋 Copy Candidate to Rebind Input
@@ -865,7 +872,7 @@
           showToast(err.message, "error");
         } finally {
           btnAiDisambiguate.disabled = false;
-          btnAiDisambiguate.innerHTML = "✨ Disambiguate Drift with AI";
+          btnAiDisambiguate.innerHTML = "<i data-lucide='sparkles' style='width:14px;height:14px;vertical-align:text-bottom;'></i> Disambiguate Drift with AI";
         }
       });
     }
@@ -1099,7 +1106,7 @@
     if (patch.status === "verified") {
       return `
         <div class="state-banner verified-banner">
-          <div class="state-banner-icon">🛡️</div>
+          <div class="state-banner-icon"><i data-lucide='shield-check' style='width:16px;height:16px;vertical-align:text-bottom;'></i></div>
           <div class="state-banner-content">
             <strong>Verification Passed (Release Ready)</strong>
             <span>Automated cross-viewport Playwright assertions passed. Patch is approved to be bundled and published.</span>
@@ -1121,7 +1128,7 @@
     if (patch.status === "verification_failed") {
       return `
         <div class="state-banner gated-banner">
-          <div class="state-banner-icon">⛔</div>
+          <div class="state-banner-icon"><i data-lucide='ban' style='width:16px;height:16px;vertical-align:text-bottom;'></i></div>
           <div class="state-banner-content">
             <strong>Automated Verification Gate Blocked</strong>
             <span>Browser verification failed. Release is strictly blocked until assertions pass. Click "Explain Failure with AI" below for diagnostics.</span>
@@ -1132,7 +1139,7 @@
     if (patch.status === "stale") {
       return `
         <div class="state-banner stale-banner">
-          <div class="state-banner-icon">⚠️</div>
+          <div class="state-banner-icon"><i data-lucide='alert-triangle' style='width:16px;height:16px;color:#fbbf24;vertical-align:text-bottom;'></i></div>
           <div class="state-banner-content">
             <strong>Target Element Drift Detected</strong>
             <span>The target selector no longer matches the live DOM. Use the recovery engine below to rebind the patch.</span>
@@ -1143,7 +1150,7 @@
     if (patch.status === "conflict") {
       return `
         <div class="state-banner conflict-banner">
-          <div class="state-banner-icon">⚡</div>
+          <div class="state-banner-icon"><i data-lucide='zap' style='width:14px;height:14px;vertical-align:text-bottom;'></i></div>
           <div class="state-banner-content">
             <strong>Multi-Patch Collision Warning</strong>
             <span>Overlaps with another patch targeting the same element. Resolve the collision before verification and release.</span>
@@ -1166,7 +1173,7 @@
       return `
         ${launchPreviewBtn}
         <button class="btn btn-danger" disabled title="Unresolved multi-patch collision prevents release">
-          ⛔ Release Blocked (Conflict)
+          <i data-lucide='ban' style='width:16px;height:16px;vertical-align:text-bottom;'></i> Release Blocked (Conflict)
         </button>
       `;
     }
@@ -1174,27 +1181,27 @@
     if (patch.status === "stale") {
       return `
         ${launchPreviewBtn}
-        <button class="btn btn-warning" id="btn-review-drift" title="Patch target has drifted and requires rebind">⚠️ Drift Detected</button>
+        <button class="btn btn-warning" id="btn-review-drift" title="Patch target has drifted and requires rebind"><i data-lucide='alert-triangle' style='width:16px;height:16px;color:#fbbf24;vertical-align:text-bottom;'></i> Drift Detected</button>
       `;
     }
     if (patch.status === "draft") {
       return `
         ${launchPreviewBtn}
-        <button class="btn btn-secondary" id="btn-simulate-drift" title="Simulate DOM drift">⚡ Simulate Drift</button>
-        <button class="btn btn-primary" id="btn-action-verify">⚡ Verify with Playwright</button>
+        <button class="btn btn-secondary" id="btn-simulate-drift" title="Simulate DOM drift"><i data-lucide='zap' style='width:14px;height:14px;vertical-align:text-bottom;'></i> Simulate Drift</button>
+        <button class="btn btn-primary" id="btn-action-verify"><i data-lucide='zap' style='width:14px;height:14px;vertical-align:text-bottom;'></i> Verify with Playwright</button>
       `;
     }
     if (patch.status === "previewing") {
       return `
         ${launchPreviewBtn}
-        <button class="btn btn-secondary" id="btn-simulate-drift" title="Simulate DOM drift">⚡ Simulate Drift</button>
-        <button class="btn btn-primary" id="btn-action-verify">⚡ Re-run Verification</button>
+        <button class="btn btn-secondary" id="btn-simulate-drift" title="Simulate DOM drift"><i data-lucide='zap' style='width:14px;height:14px;vertical-align:text-bottom;'></i> Simulate Drift</button>
+        <button class="btn btn-primary" id="btn-action-verify"><i data-lucide='zap' style='width:14px;height:14px;vertical-align:text-bottom;'></i> Re-run Verification</button>
       `;
     }
     if (patch.status === "verified") {
       return `
         ${launchPreviewBtn}
-        <button class="btn btn-secondary" id="btn-simulate-drift" title="Simulate DOM drift">⚡ Simulate Drift</button>
+        <button class="btn btn-secondary" id="btn-simulate-drift" title="Simulate DOM drift"><i data-lucide='zap' style='width:14px;height:14px;vertical-align:text-bottom;'></i> Simulate Drift</button>
         <button class="btn btn-success" id="btn-publish-verified">🚀 Publish to Release</button>
       `;
     }
@@ -1441,7 +1448,7 @@
         if (checkData.hasConflicts && checkData.conflicts.length > 0) {
           const first = checkData.conflicts[0];
           bundleGateWarning.classList.remove("hidden");
-          bundleGateWarning.innerHTML = `⛔ Mutual Conflict Blocked: Patches '${first.patchAId}' and '${first.patchBId}' collide on '${first.targetSelector}'. Both cannot be released together.`;
+          bundleGateWarning.innerHTML = `<i data-lucide='ban' style='width:16px;height:16px;vertical-align:text-bottom;'></i> Mutual Conflict Blocked: Patches '${first.patchAId}' and '${first.patchBId}' collide on '${first.targetSelector}'. Both cannot be released together.`;
           submitReleaseBundleBtn.disabled = true;
           return;
         }
@@ -1563,7 +1570,7 @@
       }
       try {
         aiGenerateBtn.disabled = true;
-        aiGenerateBtn.textContent = "✨ Generating Proposal...";
+        aiGenerateBtn.textContent = "<i data-lucide='sparkles' style='width:14px;height:14px;vertical-align:text-bottom;'></i> Generating Proposal...";
         const context = {};
         if (aiContextSelector && aiContextSelector.value.trim()) {
           context.selector = aiContextSelector.value.trim();
@@ -1619,7 +1626,7 @@
         showToast(err.message, "error");
       } finally {
         aiGenerateBtn.disabled = false;
-        aiGenerateBtn.textContent = "✨ Generate Patch Proposal";
+        aiGenerateBtn.textContent = "<i data-lucide='sparkles' style='width:14px;height:14px;vertical-align:text-bottom;'></i> Generate Patch Proposal";
       }
     });
   }
