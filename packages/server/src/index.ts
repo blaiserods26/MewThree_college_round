@@ -6,6 +6,7 @@ import { createServer } from "./api.js";
 export * from "./store.js";
 export * from "./service.js";
 export * from "./api.js";
+export * from "./ai.js";
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 4000;
 const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), "data", "patchwork-db.json");

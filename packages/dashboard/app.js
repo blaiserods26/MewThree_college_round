@@ -416,6 +416,13 @@
           </tbody>
         </table>
 
+        <div style="margin-bottom: 12px; display: flex; gap: 8px;">
+          <button class="btn btn-ai" id="btn-ai-disambiguate" type="button" style="display: flex; align-items: center; gap: 6px;">
+            ✨ Disambiguate Drift with AI
+          </button>
+        </div>
+        <div id="ai-disambiguation-container"></div>
+
         <div class="drift-rebind-controls">
           <label style="font-size: 0.82rem; font-weight: 600; color: #94a3b8; white-space: nowrap;">
             Proposed New Selector:
@@ -456,10 +463,19 @@
             ? `<div class="gate-notice blocked">⛔ Release Gate Blocked: Unresolved collision detected on target '${activeConflict ? activeConflict.targetSelector : patch.targetFingerprint.selector}'. This patch cannot be deployed until conflicts are resolved.</div>`
             : patch.status === "verified"
             ? `<div class="gate-notice success">🛡️ Verification Passed: Patch verified across Desktop & Mobile. Safe for production deployment.</div>`
-            : patch.status === "verification_failed"
-            ? `<div class="gate-notice blocked">⛔ Release Gate Blocked: Automated browser verification failed. This patch cannot be deployed until assertions pass. ${latestRun?.error ? `<br><small style="margin-top: 4px; display: block; font-family: var(--font-mono);">${latestRun.error}</small>` : ""}</div>`
+            : patch.status === "verification_failed" || (latestRun && latestRun.status === "failed")
+            ? `<div class="gate-notice blocked">
+                ⛔ Release Gate Blocked: Automated browser verification failed. This patch cannot be deployed until assertions pass.
+                ${latestRun?.error ? `<br><small style="margin-top: 4px; display: block; font-family: var(--font-mono);">${latestRun.error}</small>` : ""}
+                <div style="margin-top: 10px;">
+                  <button class="btn btn-ai" id="btn-ai-explain-verify" type="button" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; padding: 6px 12px;">
+                    ✨ Explain Failure with AI
+                  </button>
+                </div>
+              </div>`
             : `<div class="gate-notice blocked">⏳ Unverified: This patch has not passed verification yet. It is blocked from production releases.</div>`
         }
+        <div id="ai-verification-explanation-container" style="margin-top: 8px;"></div>
 
         ${
           latestRun
@@ -717,6 +733,137 @@
           await loadReleases();
         } catch (err) {
           showToast(err.message, "error");
+        }
+      });
+    }
+
+    // AI-Assisted Root Cause Explainer button listener
+    const btnAiExplain = patchDetailContainer.querySelector("#btn-ai-explain-verify");
+    if (btnAiExplain) {
+      btnAiExplain.addEventListener("click", async () => {
+        const container = patchDetailContainer.querySelector("#ai-verification-explanation-container");
+        try {
+          btnAiExplain.disabled = true;
+          btnAiExplain.innerHTML = "✨ Diagnosing Failure...";
+          showToast("Querying AI Root-Cause Explainer...", "info");
+          const res = await fetch(`${API_BASE}/ai/explain-verification`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              patchId: patch.id,
+              verificationRunId: latestRun ? latestRun.id : undefined,
+              failureLog: latestRun ? (latestRun.error || (latestRun.assertions || []).find((a) => !a.passed)?.errorMessage) : undefined,
+            }),
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || "Failed to explain verification failure");
+          }
+          const expl = await res.json();
+          if (container) {
+            container.innerHTML = `
+              <div class="ai-card" style="margin-top: 8px;">
+                <div class="ai-header">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="ai-pill">✨ AI Root Cause Analysis</span>
+                    <span class="count-pill" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">${Math.round(expl.confidence * 100)}% Confidence</span>
+                  </div>
+                </div>
+                <div style="font-size: 0.9rem; font-weight: 600; color: #f8fafc; margin-bottom: 6px;">${escapeHtml(expl.summary)}</div>
+                <div style="font-size: 0.84rem; color: #cbd5e1; margin-bottom: 10px;"><strong>Hypothesis:</strong> ${escapeHtml(expl.rootCauseHypothesis)}</div>
+                <div style="margin-bottom: 8px;">
+                  <span style="font-size: 0.75rem; color: var(--text-faint); font-weight: 600; text-transform: uppercase;">Observed Facts:</span>
+                  <ul class="ai-bullet-list">
+                    ${expl.observedFacts.map((f) => `<li>${escapeHtml(f)}</li>`).join("")}
+                  </ul>
+                </div>
+                <div>
+                  <span style="font-size: 0.75rem; color: var(--text-faint); font-weight: 600; text-transform: uppercase;">Recommended Actions:</span>
+                  <ul class="ai-bullet-list">
+                    ${expl.recommendedActions.map((a) => `<li style="color: #67e8f9;">${escapeHtml(a)}</li>`).join("")}
+                  </ul>
+                </div>
+              </div>
+            `;
+          }
+          showToast("AI root-cause diagnosis completed.", "success");
+        } catch (err) {
+          showToast(err.message, "error");
+        } finally {
+          btnAiExplain.disabled = false;
+          btnAiExplain.innerHTML = "✨ Explain Failure with AI";
+        }
+      });
+    }
+
+    // AI Semantic Target Disambiguation button listener
+    const btnAiDisambiguate = patchDetailContainer.querySelector("#btn-ai-disambiguate");
+    if (btnAiDisambiguate) {
+      btnAiDisambiguate.addEventListener("click", async () => {
+        const container = patchDetailContainer.querySelector("#ai-disambiguation-container");
+        try {
+          btnAiDisambiguate.disabled = true;
+          btnAiDisambiguate.innerHTML = "✨ Analyzing Candidates...";
+          showToast("Querying AI semantic disambiguation...", "info");
+          const candidates = [
+            { selector: "#pay-now-action", text: "Continue to Checkout (Pay Now) →", tag: "button" },
+            { selector: "#express-checkout-btn", text: "Express Checkout with Apple Pay", tag: "button" },
+            { selector: "#cart-checkout-anchor", text: "Proceed to Payment", tag: "a" },
+          ];
+          const res = await fetch(`${API_BASE}/ai/disambiguate-target`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              patchId: patch.id,
+              candidates,
+            }),
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || "Failed to disambiguate target");
+          }
+          const dis = await res.json();
+          if (container) {
+            container.innerHTML = `
+              <div class="ai-card" style="margin-top: 8px;">
+                <div class="ai-header">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="ai-pill">✨ Semantic Recovery Proposal</span>
+                    <span class="count-pill" style="background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.4);">${Math.round(dis.confidence * 100)}% Confidence</span>
+                  </div>
+                </div>
+                <div style="font-size: 0.88rem; color: #f8fafc; margin-bottom: 6px;">
+                  Recommended: <code class="spec-val-code" style="color: #38bdf8;">${escapeHtml(dis.recommendedSelector)}</code>
+                </div>
+                <div style="font-size: 0.82rem; color: #cbd5e1; margin-bottom: 8px;">
+                  ${escapeHtml(dis.rationale)}
+                </div>
+                ${dis.tradeoffs ? `<div style="font-size: 0.8rem; color: #f59e0b; margin-bottom: 10px;">⚠️ Tradeoffs: ${escapeHtml(dis.tradeoffs)}</div>` : ""}
+                <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
+                  <button type="button" class="btn btn-secondary" id="btn-apply-ai-selector" style="font-size: 0.8rem; padding: 4px 10px;">
+                    📋 Copy Candidate to Rebind Input
+                  </button>
+                  <span style="font-size: 0.75rem; color: var(--text-faint);">Human confirmation required before rebind</span>
+                </div>
+              </div>
+            `;
+            const applyBtn = container.querySelector("#btn-apply-ai-selector");
+            if (applyBtn) {
+              applyBtn.addEventListener("click", () => {
+                const rebindInput = patchDetailContainer.querySelector("#input-rebind-selector");
+                if (rebindInput) {
+                  rebindInput.value = dis.recommendedSelector;
+                  showToast(`Populated rebind input with '${dis.recommendedSelector}'`, "info");
+                }
+              });
+            }
+          }
+          showToast("Semantic disambiguation completed.", "success");
+        } catch (err) {
+          showToast(err.message, "error");
+        } finally {
+          btnAiDisambiguate.disabled = false;
+          btnAiDisambiguate.innerHTML = "✨ Disambiguate Drift with AI";
         }
       });
     }
@@ -1288,9 +1435,180 @@
   }
 
   // Modal Open / Close
-  createPatchBtn.addEventListener("click", () => newPatchModal.classList.remove("hidden"));
-  closeModalBtn.addEventListener("click", () => newPatchModal.classList.add("hidden"));
-  cancelNewPatchBtn.addEventListener("click", () => newPatchModal.classList.add("hidden"));
+  if (createPatchBtn) createPatchBtn.addEventListener("click", () => newPatchModal && newPatchModal.classList.remove("hidden"));
+  if (closeModalBtn) closeModalBtn.addEventListener("click", () => newPatchModal && newPatchModal.classList.add("hidden"));
+  if (cancelNewPatchBtn) cancelNewPatchBtn.addEventListener("click", () => newPatchModal && newPatchModal.classList.add("hidden"));
+
+  // AI Copilot Modal Elements & Event Listeners
+  const openAiCopilotBtn = document.getElementById("open-ai-copilot-btn");
+  const aiCopilotModal = document.getElementById("ai-copilot-modal");
+  const closeAiCopilotBtn = document.getElementById("close-ai-copilot-btn");
+  const cancelAiCopilotBtn = document.getElementById("cancel-ai-copilot-btn");
+  const aiPromptInput = document.getElementById("ai-prompt-input");
+  const aiContextSelector = document.getElementById("ai-context-selector");
+  const aiContextTag = document.getElementById("ai-context-tag");
+  const aiGenerateBtn = document.getElementById("ai-generate-btn");
+  const aiProposalReviewCard = document.getElementById("ai-proposal-review-card");
+  const aiProposalConfidence = document.getElementById("ai-proposal-confidence");
+  const aiProposalExplanation = document.getElementById("ai-proposal-explanation");
+  const aiProposalAssumptions = document.getElementById("ai-proposal-assumptions");
+  const aiReviewName = document.getElementById("ai-review-name");
+  const aiReviewSelector = document.getElementById("ai-review-selector");
+  const aiReviewTag = document.getElementById("ai-review-tag");
+  const aiReviewOpType = document.getElementById("ai-review-op-type");
+  const aiReviewOpVal = document.getElementById("ai-review-op-val");
+  const acceptAiProposalBtn = document.getElementById("accept-ai-proposal-btn");
+
+  let currentAiProposal = null;
+
+  if (openAiCopilotBtn) {
+    openAiCopilotBtn.addEventListener("click", () => {
+      if (!aiCopilotModal) return;
+      aiCopilotModal.classList.remove("hidden");
+      if (aiPromptInput) aiPromptInput.value = "";
+      if (aiProposalReviewCard) aiProposalReviewCard.classList.add("hidden");
+      if (acceptAiProposalBtn) acceptAiProposalBtn.disabled = true;
+      currentAiProposal = null;
+    });
+  }
+
+  if (closeAiCopilotBtn) {
+    closeAiCopilotBtn.addEventListener("click", () => aiCopilotModal && aiCopilotModal.classList.add("hidden"));
+  }
+  if (cancelAiCopilotBtn) {
+    cancelAiCopilotBtn.addEventListener("click", () => aiCopilotModal && aiCopilotModal.classList.add("hidden"));
+  }
+
+  if (aiGenerateBtn) {
+    aiGenerateBtn.addEventListener("click", async () => {
+      const prompt = aiPromptInput ? aiPromptInput.value.trim() : "";
+      if (!prompt) {
+        showToast("Please enter a natural-language description of the hotfix.", "error");
+        return;
+      }
+      try {
+        aiGenerateBtn.disabled = true;
+        aiGenerateBtn.textContent = "✨ Generating Proposal...";
+        const context = {};
+        if (aiContextSelector && aiContextSelector.value.trim()) {
+          context.selector = aiContextSelector.value.trim();
+        }
+        if (aiContextTag && aiContextTag.value.trim()) {
+          context.tag = aiContextTag.value.trim();
+        }
+
+        const res = await fetch(`${API_BASE}/ai/generate-patch`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prompt,
+            websiteId: activeWebsiteId,
+            context: Object.keys(context).length > 0 ? context : undefined,
+          }),
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || "Failed to generate patch proposal");
+        }
+
+        const data = await res.json();
+        currentAiProposal = data.proposal;
+
+        if (aiProposalConfidence) {
+          aiProposalConfidence.textContent = `${Math.round(currentAiProposal.confidence * 100)}% Match`;
+        }
+        if (aiProposalExplanation) {
+          aiProposalExplanation.textContent = currentAiProposal.explanation;
+        }
+        if (aiProposalAssumptions) {
+          aiProposalAssumptions.innerHTML = (currentAiProposal.assumptions || [])
+            .map((a) => `<li>${escapeHtml(a)}</li>`)
+            .join("");
+        }
+        if (aiReviewName) aiReviewName.value = currentAiProposal.patchName;
+        if (aiReviewSelector) aiReviewSelector.value = currentAiProposal.targetFingerprint.selector;
+        if (aiReviewTag) aiReviewTag.value = currentAiProposal.targetFingerprint.tag || "button";
+        if (aiReviewOpType) aiReviewOpType.value = currentAiProposal.operation.type;
+        if (aiReviewOpVal) {
+          aiReviewOpVal.value =
+            currentAiProposal.operation.type === "style.set"
+              ? `${currentAiProposal.operation.property}: ${currentAiProposal.operation.value}`
+              : currentAiProposal.operation.value || "";
+        }
+
+        if (aiProposalReviewCard) aiProposalReviewCard.classList.remove("hidden");
+        if (acceptAiProposalBtn) acceptAiProposalBtn.disabled = false;
+        showToast("AI patch proposal generated. Review before saving as draft.", "success");
+      } catch (err) {
+        showToast(err.message, "error");
+      } finally {
+        aiGenerateBtn.disabled = false;
+        aiGenerateBtn.textContent = "✨ Generate Patch Proposal";
+      }
+    });
+  }
+
+  if (acceptAiProposalBtn) {
+    acceptAiProposalBtn.addEventListener("click", async () => {
+      if (!currentAiProposal) return;
+      try {
+        acceptAiProposalBtn.disabled = true;
+        acceptAiProposalBtn.textContent = "Saving Draft...";
+
+        const name = (aiReviewName && aiReviewName.value.trim()) || currentAiProposal.patchName;
+        const selector = (aiReviewSelector && aiReviewSelector.value.trim()) || currentAiProposal.targetFingerprint.selector;
+        const tag = (aiReviewTag && aiReviewTag.value.trim()) || currentAiProposal.targetFingerprint.tag || "button";
+
+        let operation = { ...currentAiProposal.operation };
+        if (operation.type === "style.set" && aiReviewOpVal) {
+          const rawVal = aiReviewOpVal.value.trim();
+          if (rawVal.includes(":")) {
+            const parts = rawVal.split(":");
+            operation.property = parts[0].trim();
+            operation.value = parts.slice(1).join(":").trim();
+          } else {
+            operation.value = rawVal;
+          }
+        } else if (operation.type === "text.set" && aiReviewOpVal) {
+          operation.value = aiReviewOpVal.value.trim();
+        }
+
+        const res = await fetch(`${API_BASE}/patches`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            websiteId: activeWebsiteId,
+            name,
+            targetFingerprint: {
+              ...currentAiProposal.targetFingerprint,
+              selector,
+              tag,
+            },
+            operation,
+            actor: { id: "operator-ai", name: "Operator (AI-Assisted)", role: "developer" },
+          }),
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || "Failed to save draft patch");
+        }
+
+        const createdPatch = await res.json();
+        showToast(`AI proposal saved as draft '${createdPatch.name}'! Verification required before release.`, "success");
+        if (aiCopilotModal) aiCopilotModal.classList.add("hidden");
+        await loadPatches();
+        selectPatch(createdPatch.id);
+        await loadAuditEvents();
+      } catch (err) {
+        showToast(err.message, "error");
+      } finally {
+        acceptAiProposalBtn.disabled = false;
+        acceptAiProposalBtn.textContent = "💾 Save as Draft Patch";
+      }
+    });
+  }
 
   // Create Patch Form Submit
   newPatchForm.addEventListener("submit", async (e) => {

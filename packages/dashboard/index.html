@@ -34,6 +34,9 @@
         <button id="open-inspector-btn" class="btn btn-secondary" type="button">
           🔍 Visual Inspector
         </button>
+        <button id="open-ai-copilot-btn" class="btn btn-ai" type="button">
+          ✨ AI Hotfix Copilot
+        </button>
         <button id="create-patch-btn" class="btn btn-primary" type="button">
           + New Patch Draft
         </button>
@@ -232,6 +235,93 @@
             <button id="cancel-release-modal-btn" class="btn btn-secondary" type="button">Cancel</button>
             <button id="submit-release-bundle-btn" class="btn btn-primary" type="submit" disabled>
               🚀 Publish Release Bundle
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- AI Hotfix Copilot Modal -->
+    <div id="ai-copilot-modal" class="modal-backdrop hidden">
+      <div class="modal-dialog" style="max-width: 620px;">
+        <div class="modal-header">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="ai-pill">✨ Copilot</span>
+            <h3 class="modal-title" style="margin: 0;">Natural-Language Hotfix</h3>
+          </div>
+          <button id="close-ai-copilot-btn" class="modal-close" type="button">×</button>
+        </div>
+        <form id="ai-copilot-form" class="modal-form">
+          <div class="form-group">
+            <label for="ai-prompt-input">Describe the Bug or Hotfix</label>
+            <textarea id="ai-prompt-input" rows="3" required placeholder="e.g. The checkout button is invisible on mobile. Restore it without changing the desktop layout." style="background: var(--bg-surface-elevated); border: 1px solid var(--border-light); color: var(--text-main); padding: 10px 12px; border-radius: var(--radius-sm); font-family: inherit; font-size: 0.9rem; resize: vertical;"></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="ai-context-selector">Target Selector Context (Optional)</label>
+              <input id="ai-context-selector" type="text" placeholder="e.g. #checkout-btn" />
+            </div>
+            <div class="form-group">
+              <label for="ai-context-tag">Target Tag Context (Optional)</label>
+              <input id="ai-context-tag" type="text" placeholder="e.g. button" />
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end;">
+            <button id="ai-generate-btn" class="btn btn-ai" type="button">
+              ✨ Generate Patch Proposal
+            </button>
+          </div>
+
+          <!-- Proposal Review Panel (Revealed after generation) -->
+          <div id="ai-proposal-review-card" class="ai-card hidden">
+            <div class="ai-header">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="ai-pill">AI Proposal</span>
+                <span id="ai-proposal-confidence" class="count-pill" style="background: rgba(34,197,94,0.2); color: #4ade80; border: 1px solid rgba(34,197,94,0.4);">95% Match</span>
+              </div>
+            </div>
+
+            <p id="ai-proposal-explanation" style="font-size: 0.88rem; color: #f8fafc; margin-bottom: 8px; line-height: 1.4;"></p>
+
+            <div style="margin-bottom: 12px;">
+              <span style="font-size: 0.75rem; color: var(--text-faint); font-weight: 600; text-transform: uppercase;">Assumptions:</span>
+              <ul id="ai-proposal-assumptions" class="ai-bullet-list"></ul>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 8px;">
+              <label for="ai-review-name">Patch Name</label>
+              <input id="ai-review-name" type="text" />
+            </div>
+
+            <div class="form-row" style="margin-bottom: 8px;">
+              <div class="form-group">
+                <label for="ai-review-selector">Target Selector</label>
+                <input id="ai-review-selector" type="text" />
+              </div>
+              <div class="form-group">
+                <label for="ai-review-tag">Tag</label>
+                <input id="ai-review-tag" type="text" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="ai-review-op-type">Operation</label>
+                <input id="ai-review-op-type" type="text" readonly style="opacity: 0.8;" />
+              </div>
+              <div class="form-group">
+                <label id="ai-review-op-val-label" for="ai-review-op-val">Value / Details</label>
+                <input id="ai-review-op-val" type="text" />
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button id="cancel-ai-copilot-btn" class="btn btn-secondary" type="button">Cancel</button>
+            <button id="accept-ai-proposal-btn" class="btn btn-primary" type="button" disabled>
+              💾 Save as Draft Patch
             </button>
           </div>
         </form>

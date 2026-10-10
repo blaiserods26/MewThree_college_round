@@ -26,6 +26,15 @@ import {
 } from "@patchwork/verification";
 import { JsonFileStore } from "./store.js";
 
+import {
+  type DisambiguateCandidateInput,
+  type GeneratedPatchProposal,
+  type GeneratePatchRequest,
+  type TargetDisambiguationResult,
+  type VerificationExplanationResult,
+} from "@patchwork/contracts";
+import { DefaultAiService } from "./ai.js";
+
 /** Seam for the browser verification worker; replaceable in tests. */
 export type PatchVerifier = (options: VerifyPatchOptions) => Promise<VerificationRun>;
 
@@ -33,6 +42,7 @@ export interface PatchServiceOptions {
   verifier?: PatchVerifier;
   /** Maximum time a verification may take before it is recorded as failed. */
   verificationTimeoutMs?: number;
+  aiService?: DefaultAiService;
 }
 
 export interface CreatePatchInput {
@@ -77,6 +87,7 @@ export interface ResolveConflictInput {
 export class PatchService {
   private verifier: PatchVerifier;
   private verificationTimeoutMs: number;
+  private aiService: DefaultAiService;
 
   constructor(
     private store: JsonFileStore,
@@ -84,6 +95,7 @@ export class PatchService {
   ) {
     this.verifier = options.verifier ?? runPatchVerification;
     this.verificationTimeoutMs = options.verificationTimeoutMs ?? DEFAULT_VERIFICATION_TIMEOUT_MS;
+    this.aiService = options.aiService ?? new DefaultAiService();
   }
 
   public listWebsites(): Website[] {
@@ -775,5 +787,66 @@ export class PatchService {
     this.store.addAuditEvent(auditEvent);
 
     return { patch: updatedPatch, supersededPatch };
+  }
+
+  // ---------------------------------------------------------------------------
+  // AI Assistive Enhancements (Phase 8)
+  // ---------------------------------------------------------------------------
+
+  public async generatePatchProposal(input: GeneratePatchRequest): Promise<GeneratedPatchProposal> {
+    return this.aiService.generatePatchProposal(input);
+  }
+
+  public async explainVerification(
+    runIdOrInput: string | { patchId: string; failureLog?: string; run?: VerificationRun }
+  ): Promise<VerificationExplanationResult> {
+    let run: VerificationRun | undefined;
+    let patch: Patch | undefined;
+
+    if (typeof runIdOrInput === "string") {
+      run = this.store.getVerificationRun(runIdOrInput);
+      if (!run) {
+        throw new Error(`Verification run '${runIdOrInput}' not found.`);
+      }
+      patch = this.store.getPatch(run.patchId);
+      if (!patch) {
+        throw new Error(`Patch '${run.patchId}' not found.`);
+      }
+    } else {
+      patch = this.store.getPatch(runIdOrInput.patchId);
+      if (!patch) {
+        throw new Error(`Patch '${runIdOrInput.patchId}' not found.`);
+      }
+      if (runIdOrInput.run) {
+        run = runIdOrInput.run;
+      } else {
+        const runs = this.store.getVerificationRuns(runIdOrInput.patchId);
+        run = runs[0] || {
+          id: `synthetic-run-${Date.now()}`,
+          patchId: patch.id,
+          websiteId: patch.websiteId,
+          status: "failed",
+          viewportsRun: [],
+          assertions: [],
+          durationMs: 0,
+          createdAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+          error: runIdOrInput.failureLog || "Verification run failed.",
+        };
+      }
+    }
+
+    return this.aiService.explainVerificationFailure({ run, patch });
+  }
+
+  public async disambiguateTarget(
+    patchId: string,
+    candidates: DisambiguateCandidateInput[]
+  ): Promise<TargetDisambiguationResult> {
+    const patch = this.store.getPatch(patchId);
+    if (!patch) {
+      throw new Error(`Patch '${patchId}' not found.`);
+    }
+    return this.aiService.disambiguateTarget({ patch, candidates });
   }
 }

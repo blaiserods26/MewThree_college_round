@@ -286,10 +286,55 @@ export function createServer(service: PatchService, options: ApiServerOptions = 
         return sendJson(res, 200, service.listReleases(websiteId));
       }
 
+      // 5. AI Endpoints (Phase 8)
+      if (pathname === "/api/ai/generate-patch" && method === "POST") {
+        const body = await parseJsonBody(req);
+        if (!body.prompt || typeof body.prompt !== "string") {
+          return sendJson(res, 400, { error: "'prompt' is required to generate an AI hotfix proposal." });
+        }
+        const proposal = await service.generatePatchProposal({
+          websiteId: body.websiteId || "demo-store",
+          prompt: body.prompt,
+          elementContext: body.elementContext || body.context,
+        });
+        return sendJson(res, 200, {
+          proposal,
+          ...proposal,
+          provider: "mock",
+        });
+      }
+
+      if (pathname === "/api/ai/explain-verification" && method === "POST") {
+        const body = await parseJsonBody(req);
+        if (!body.runId && !body.verificationRunId && !body.patchId) {
+          return sendJson(res, 400, { error: "'runId' or 'patchId' is required." });
+        }
+        const runId = body.runId || body.verificationRunId;
+        const explanation = await service.explainVerification(
+          runId ? runId : { patchId: body.patchId, failureLog: body.failureLog }
+        );
+        return sendJson(res, 200, {
+          ...explanation,
+          provider: "mock",
+        });
+      }
+
+      if (pathname === "/api/ai/disambiguate-target" && method === "POST") {
+        const body = await parseJsonBody(req);
+        if (!body.patchId) {
+          return sendJson(res, 400, { error: "'patchId' is required." });
+        }
+        const result = await service.disambiguateTarget(body.patchId, body.candidates || []);
+        return sendJson(res, 200, {
+          ...result,
+          provider: "mock",
+        });
+      }
+
       return sendJson(res, 404, { error: "Endpoint not found" });
     } catch (err: any) {
       const message: string = err?.message || "An error occurred";
-      const isNotFound = /^(Patch|Website|Release) '.*' not found\.?$/.test(message);
+      const isNotFound = /^(Patch|Website|Release|Verification run) '.*' not found\.?$/.test(message);
       return sendJson(res, isNotFound ? 404 : 400, { error: message });
     }
   });
