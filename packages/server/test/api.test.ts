@@ -136,4 +136,41 @@ describe("PATCHWORK HTTP REST API Endpoints", () => {
     expect(Array.isArray(events)).toBe(true);
     expect(events.length).toBeGreaterThanOrEqual(1);
   });
+
+  it("POST /api/patches/:id/rebind updates selector, increments version, and records audit log", async () => {
+    // 1. Create a draft patch
+    const createRes = await fetch(`${baseUrl}/api/patches`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        websiteId: "demo-store",
+        name: "CTA Target to Rebind",
+        targetFingerprint: { tag: "button", selector: "#old-btn" },
+        operation: { type: "style.set", property: "display", value: "block" },
+        actor: { id: "dev-rebind", name: "Dev Rebind", role: "developer" },
+      }),
+    });
+    const patch = await createRes.json();
+
+    // 2. Execute rebind
+    const rebindRes = await fetch(`${baseUrl}/api/patches/${patch.id}/rebind`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        selector: "#new-action-btn",
+        targetFingerprint: { text: "Click Here", accessibleName: "Click Here" },
+        changeNote: "Rebound selector to #new-action-btn",
+        actor: { id: "dev-rebind", name: "Dev Rebind", role: "developer" },
+      }),
+    });
+
+    expect(rebindRes.status).toBe(200);
+    const rebound = await rebindRes.json();
+    expect(rebound.currentVersion).toBe(2);
+    expect(rebound.targetFingerprint.selector).toBe("#new-action-btn");
+    expect(rebound.status).toBe("previewing");
+    expect(rebound.versions.length).toBe(2);
+    expect(rebound.versions[1].targetFingerprint.selector).toBe("#new-action-btn");
+  });
 });
+

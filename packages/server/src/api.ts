@@ -164,6 +164,22 @@ export function createServer(service: PatchService): http.Server {
         return sendJson(res, 200, updated);
       }
 
+      // Rebind Patch Target (Drift Recovery)
+      const rebindMatch = pathname.match(/^\/api\/patches\/([^/]+)\/rebind$/);
+      if (rebindMatch && method === "POST") {
+        const body = await parseJsonBody(req);
+        if (!body.selector) {
+          return sendJson(res, 400, { error: "selector is required for rebind." });
+        }
+        const rebound = service.rebindPatchTarget(rebindMatch[1], {
+          selector: body.selector,
+          targetFingerprint: body.targetFingerprint,
+          changeNote: body.changeNote,
+          actor: body.actor || { id: "anonymous", name: "Anonymous", role: "developer" },
+        });
+        return sendJson(res, 200, rebound);
+      }
+
       // Execute Automated Verification for Patch
       const verifyMatch = pathname.match(/^\/api\/patches\/([^/]+)\/verify$/);
       if (verifyMatch && method === "POST") {

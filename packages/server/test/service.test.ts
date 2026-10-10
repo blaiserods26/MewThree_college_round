@@ -178,4 +178,58 @@ describe("PatchService Domain & Persistence Engine", () => {
     expect(retrieved?.name).toBe("Persistence test");
     expect(retrieved?.currentVersion).toBe(1);
   });
+
+  it("rebinds patch target, creates immutable version, emits audit event, and resets status for re-verification", () => {
+    const store = new JsonFileStore(TEST_DB_PATH);
+    const service = new PatchService(store);
+
+    const patch = service.createPatch({
+      websiteId: "demo-store",
+      name: "Checkout Button Visibility",
+      targetFingerprint: defaultFingerprint,
+      operation: defaultOperation,
+      actor,
+    });
+
+    // Mark as stale due to DOM drift
+    service.transitionPatchStatus(patch.id, "previewing", actor);
+    service.transitionPatchStatus(patch.id, "stale", actor, "Target missing");
+    expect(service.getPatch(patch.id)?.status).toBe("stale");
+
+    // Rebind target to #pay-now-action
+    const rebound = service.rebindPatchTarget(patch.id, {
+      selector: "#pay-now-action",
+      targetFingerprint: {
+        accessibleName: "Continue to Checkout",
+      },
+      actor,
+      changeNote: "Target migrated from #checkout-btn to #pay-now-action",
+    });
+
+    expect(rebound.currentVersion).toBe(2);
+    expect(rebound.status).toBe("previewing");
+    expect(rebound.targetFingerprint.selector).toBe("#pay-now-action");
+    expect(rebound.versions.length).toBe(2);
+    expect(rebound.versions[0].targetFingerprint.selector).toBe("#checkout-btn");
+    expect(rebound.versions[1].targetFingerprint.selector).toBe("#pay-now-action");
+
+    // Audit trail should log the migration
+    const events = service.listAuditEvents({ entityId: patch.id });
+    const rebindEvent = events.find(
+      (e) => e.details?.metadata?.migration === "target_rebind"
+    );
+    expect(rebindEvent).toBeDefined();
+    expect(rebindEvent?.details.metadata?.fromSelector).toBe("#checkout-btn");
+    expect(rebindEvent?.details.metadata?.toSelector).toBe("#pay-now-action");
+
+    // Release publication must be blocked until verified
+    expect(() => {
+      service.createRelease({
+        websiteId: "demo-store",
+        patchIds: [patch.id],
+        actor,
+      });
+    }).toThrow(/cannot be published/i);
+  });
 });
+

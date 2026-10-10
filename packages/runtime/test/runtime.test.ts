@@ -213,4 +213,83 @@ describe("Patchwork Client Runtime & Preview Isolation", () => {
 
     expect(activeReleaseFetched).toBe(false);
   });
+
+  it("in preview mode with drifted target, halts mutation safely, renders drift watermark, and sets preview pill to stale", async () => {
+    window.location.search = "?patchwork_preview=p-drifted";
+
+    // DOM has drifted: button is now #pay-now-action
+    document.body.innerHTML = `
+      <script src="/patchwork.js" data-website-id="demo-store"></script>
+      <div id="checkout-summary">
+        <div class="payment-drawer">
+          <button id="pay-now-action" class="btn btn-checkout" type="button" aria-label="Continue to Checkout">
+            Continue to Checkout
+          </button>
+        </div>
+      </div>
+    `;
+
+    let transitionCalled = false;
+    globalThis.fetch = async (url: string | URL | Request) => {
+      const urlStr = url.toString();
+      if (urlStr.includes("/api/patches/p-drifted/transition")) {
+        transitionCalled = true;
+        return new Response(JSON.stringify({ status: "stale" }), { status: 200 });
+      }
+      if (urlStr.includes("/api/patches/p-drifted")) {
+        return new Response(
+          JSON.stringify({
+            id: "p-drifted",
+            websiteId: "demo-store",
+            name: "Drifted patch",
+            status: "published",
+            currentVersion: 1,
+            targetFingerprint: {
+              tag: "button",
+              role: "button",
+              text: "Continue to Checkout",
+              accessibleName: "Continue to Checkout",
+              selector: "#checkout-btn", // Non-existent!
+              parentContext: "checkout-summary",
+            },
+            operation: { type: "style.set", property: "display", value: "inline-flex" },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      return new Response("Not found", { status: 404 });
+    };
+
+    const runtime = await initPatchworkRuntime({
+      apiBase: "http://localhost:4000/api",
+      doc: document,
+      win: window as unknown as Window,
+    });
+
+    expect(runtime.mode).toBe("preview");
+    expect(runtime.results[0].status).toBe("stale");
+    expect(transitionCalled).toBe(true);
+
+    // Drift warning watermark must be rendered
+    const watermark = document.getElementById("patchwork-drift-watermark");
+    expect(watermark).not.toBeNull();
+    expect(watermark?.textContent).toContain("DOM DRIFT DETECTED");
+    expect(watermark?.textContent).toContain("#pay-now-action");
+
+    // Preview bar should indicate stale
+    const statusPill = document.getElementById("patchwork-preview-status-pill");
+    expect(statusPill?.textContent?.toUpperCase()).toContain("STALE");
+
+    // Window diagnostics exposed
+    const winObj = (window as any).__PATCHWORK_PREVIEW__;
+    expect(winObj).toBeDefined();
+    expect(winObj.drift.isDrifted).toBe(true);
+    expect(winObj.drift.candidate.selector).toBe("#pay-now-action");
+    expect(winObj.drift.score).toBeGreaterThanOrEqual(0.85);
+
+    // Unintended element must NOT have been mutated
+    const driftedBtn = document.getElementById("pay-now-action") as HTMLElement;
+    expect(driftedBtn.style.display).not.toBe("inline-flex");
+  });
 });
+

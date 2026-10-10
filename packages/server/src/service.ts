@@ -40,6 +40,13 @@ export interface CreateReleaseInput {
   changeSummary?: string;
 }
 
+export interface RebindPatchServiceInput {
+  selector: string;
+  targetFingerprint?: Partial<TargetFingerprint>;
+  changeNote?: string;
+  actor: AuditActor;
+}
+
 export class PatchService {
   constructor(private store: JsonFileStore) {}
 
@@ -166,6 +173,75 @@ export class PatchService {
       details: {
         version: nextVersionNum,
         reason: input.changeNote,
+      },
+    });
+    this.store.addAuditEvent(auditEvent);
+
+    return updatedPatch;
+  }
+
+  public rebindPatchTarget(patchId: string, input: RebindPatchServiceInput): Patch {
+    const patch = this.store.getPatch(patchId);
+    if (!patch) {
+      throw new Error(`Patch '${patchId}' not found.`);
+    }
+
+    const fromSelector = patch.targetFingerprint.selector;
+    const toSelector = input.selector;
+    const fromStatus = patch.status;
+
+    const now = new Date().toISOString();
+    const nextVersionNum = patch.currentVersion + 1;
+
+    const newTargetFingerprint: TargetFingerprint = {
+      ...patch.targetFingerprint,
+      ...(input.targetFingerprint || {}),
+      selector: toSelector,
+    };
+
+    const note =
+      input.changeNote ||
+      `Target rebound from '${fromSelector}' to '${toSelector}' after DOM drift.`;
+
+    const newVersion: PatchVersion = {
+      version: nextVersionNum,
+      targetFingerprint: newTargetFingerprint,
+      operation: patch.operation,
+      createdAt: now,
+      createdBy: input.actor.id,
+      changeNote: note,
+    };
+
+    const newStatus: PatchStatus = "previewing";
+
+    const updatedPatch: Patch = {
+      ...patch,
+      status: newStatus,
+      currentVersion: nextVersionNum,
+      versions: [...patch.versions, newVersion],
+      targetFingerprint: newTargetFingerprint,
+      updatedAt: now,
+    };
+
+    this.store.savePatch(updatedPatch);
+
+    const auditEvent = createAuditEvent({
+      websiteId: patch.websiteId,
+      entityType: "patch",
+      entityId: patch.id,
+      action: "patch.updated",
+      actor: input.actor,
+      timestamp: now,
+      details: {
+        fromStatus,
+        toStatus: newStatus,
+        version: nextVersionNum,
+        reason: note,
+        metadata: {
+          migration: "target_rebind",
+          fromSelector,
+          toSelector,
+        },
       },
     });
     this.store.addAuditEvent(auditEvent);
@@ -345,10 +421,17 @@ export class PatchService {
     return rollbackResult;
   }
 
-  public listAuditEvents(websiteId?: string): AuditEvent[] {
+  public listAuditEvents(filter?: string | { websiteId?: string; entityId?: string }): AuditEvent[] {
     let events = this.store.getAuditEvents();
-    if (websiteId) {
-      events = events.filter((e) => e.websiteId === websiteId);
+    if (typeof filter === "string") {
+      events = events.filter((e) => e.websiteId === filter);
+    } else if (filter) {
+      if (filter.websiteId) {
+        events = events.filter((e) => e.websiteId === filter.websiteId);
+      }
+      if (filter.entityId) {
+        events = events.filter((e) => e.entityId === filter.entityId);
+      }
     }
     return events;
   }
@@ -406,8 +489,13 @@ export class PatchService {
     this.store.saveVerificationRun(run);
 
     // 5. Update patch status based on verification outcome
+    const isDrift = run.error?.includes("DOM Drift Detected");
     const targetStatus: PatchStatus =
-      run.status === "passed" ? "verified" : "verification_failed";
+      run.status === "passed"
+        ? "verified"
+        : isDrift
+        ? "stale"
+        : "verification_failed";
     const priorStatus = patch.status;
     patch.status = targetStatus;
     patch.updatedAt = new Date().toISOString();

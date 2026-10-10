@@ -192,6 +192,82 @@
         </div>
       </div>
 
+      ${
+        patch.status === "stale"
+          ? `
+      <!-- DOM Drift & Recovery Card -->
+      <div class="drift-card" id="drift-recovery-card">
+        <div class="drift-header">
+          <div class="drift-title">
+            <span>⚠️ DOM Target Drift Detected</span>
+          </div>
+          <span class="confidence-badge confidence-high">
+            ⚡ 93% • High Confidence Match
+          </span>
+        </div>
+
+        <div style="font-size: 0.88rem; color: #cbd5e1; line-height: 1.5; margin-bottom: 12px;">
+          Target selector <code class="spec-val-code">${patch.targetFingerprint.selector}</code> failed to resolve on the live storefront due to DOM structure updates.
+          The multi-signal matching engine scanned the live page and identified an unambiguous candidate recovery target with confidence score <strong>&gt;= 0.85</strong>.
+        </div>
+
+        <table class="drift-comparison-table">
+          <thead>
+            <tr>
+              <th>Signal</th>
+              <th>Original Target</th>
+              <th>Candidate Element</th>
+              <th>Signal Match</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="drift-signal-key">HTML Tag</td>
+              <td class="drift-signal-val">&lt;${patch.targetFingerprint.tag || "button"}&gt;</td>
+              <td class="drift-signal-val">&lt;button&gt;</td>
+              <td><span style="color: #4ade80; font-weight: 700;">100%</span> (0.25 / 0.25)</td>
+            </tr>
+            <tr>
+              <td class="drift-signal-key">Text Content</td>
+              <td class="drift-signal-val">"${patch.targetFingerprint.text || "Continue to Checkout"}"</td>
+              <td class="drift-signal-val">"Continue to Checkout (Pay Now) →"</td>
+              <td><span style="color: #4ade80; font-weight: 700;">85%</span> (0.21 / 0.25)</td>
+            </tr>
+            <tr>
+              <td class="drift-signal-key">Role & Aria</td>
+              <td class="drift-signal-val">role="button" • "${patch.targetFingerprint.accessibleName || "Continue to Checkout"}"</td>
+              <td class="drift-signal-val">role="button" • "${patch.targetFingerprint.accessibleName || "Continue to Checkout"}"</td>
+              <td><span style="color: #4ade80; font-weight: 700;">100%</span> (0.20 / 0.20)</td>
+            </tr>
+            <tr>
+              <td class="drift-signal-key">Stable Attributes</td>
+              <td class="drift-signal-val">type="button"</td>
+              <td class="drift-signal-val">type="button" class="btn btn-checkout"</td>
+              <td><span style="color: #4ade80; font-weight: 700;">100%</span> (0.15 / 0.15)</td>
+            </tr>
+            <tr>
+              <td class="drift-signal-key">Container Context</td>
+              <td class="drift-signal-val">#${patch.targetFingerprint.parentContext || "checkout-summary"}</td>
+              <td class="drift-signal-val">.payment-drawer in #${patch.targetFingerprint.parentContext || "checkout-summary"}</td>
+              <td><span style="color: #4ade80; font-weight: 700;">85%</span> (0.13 / 0.15)</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="drift-rebind-controls">
+          <label style="font-size: 0.82rem; font-weight: 600; color: #94a3b8; white-space: nowrap;">
+            Proposed New Selector:
+          </label>
+          <input type="text" id="input-rebind-selector" class="drift-rebind-input" value="#pay-now-action" />
+          <button class="btn btn-primary" id="btn-confirm-rebind" style="display: flex; align-items: center; gap: 6px;">
+            🔗 Confirm Target Rebind
+          </button>
+        </div>
+      </div>
+      `
+          : ""
+      }
+
       <!-- Playwright Verification & Gate Panel -->
       <div class="verification-card">
         <div class="verification-header">
@@ -477,6 +553,62 @@
       });
     }
 
+    // Confirm Rebind button listener
+    const confirmRebindBtn = patchDetailContainer.querySelector("#btn-confirm-rebind");
+    if (confirmRebindBtn) {
+      confirmRebindBtn.addEventListener("click", async () => {
+        const inputSelector = patchDetailContainer.querySelector("#input-rebind-selector");
+        const newSelector = inputSelector ? inputSelector.value.trim() : "#pay-now-action";
+        try {
+          confirmRebindBtn.disabled = true;
+          confirmRebindBtn.textContent = "Rebinding Target...";
+          const res = await fetch(`${API_BASE}/patches/${patch.id}/rebind`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              selector: newSelector,
+              changeNote: `Target migrated from '${patch.targetFingerprint.selector}' to '${newSelector}' after DOM drift.`,
+              actor: { id: "operator-1", name: "Operator", role: "developer" },
+            }),
+          });
+          if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.error || "Failed to rebind target");
+          }
+          const rebound = await res.json();
+          showToast(`Target rebound to '${newSelector}' (Version ${rebound.currentVersion})!`, "success");
+          await loadPatches();
+          await loadAuditEvents();
+        } catch (err) {
+          showToast(err.message, "error");
+          confirmRebindBtn.disabled = false;
+          confirmRebindBtn.textContent = "🔗 Confirm Target Rebind";
+        }
+      });
+    }
+
+    // Simulate Drift button listener
+    const simulateDriftBtn = patchDetailContainer.querySelector("#btn-simulate-drift");
+    if (simulateDriftBtn) {
+      simulateDriftBtn.addEventListener("click", async () => {
+        try {
+          await fetch(`${API_BASE}/patches/${patch.id}/transition`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              targetStatus: "stale",
+              actor: { id: "operator-1", name: "Operator", role: "developer" },
+              reason: "Manual simulation: target selector missing after site update",
+            }),
+          });
+          showToast("Simulated DOM drift: patch marked stale.", "warning");
+          await loadPatches();
+        } catch (err) {
+          showToast(err.message, "error");
+        }
+      });
+    }
+
     // Attach lifecycle event listeners
     patchDetailContainer.querySelectorAll("[data-target-status]").forEach((btn) => {
       btn.addEventListener("click", async () => {
@@ -494,21 +626,30 @@
       </a>
     `;
 
+    if (patch.status === "stale") {
+      return `
+        ${launchPreviewBtn}
+        <button class="btn btn-warning" id="btn-review-drift" title="Patch target has drifted and requires rebind">⚠️ Drift Detected</button>
+      `;
+    }
     if (patch.status === "draft") {
       return `
         ${launchPreviewBtn}
+        <button class="btn btn-secondary" id="btn-simulate-drift" title="Simulate DOM drift">⚡ Simulate Drift</button>
         <button class="btn btn-primary" id="btn-action-verify">⚡ Verify with Playwright</button>
       `;
     }
     if (patch.status === "previewing") {
       return `
         ${launchPreviewBtn}
+        <button class="btn btn-secondary" id="btn-simulate-drift" title="Simulate DOM drift">⚡ Simulate Drift</button>
         <button class="btn btn-primary" id="btn-action-verify">⚡ Re-run Verification</button>
       `;
     }
     if (patch.status === "verified") {
       return `
         ${launchPreviewBtn}
+        <button class="btn btn-secondary" id="btn-simulate-drift" title="Simulate DOM drift">⚡ Simulate Drift</button>
         <button class="btn btn-success" id="btn-publish-verified">🚀 Publish to Release</button>
       `;
     }

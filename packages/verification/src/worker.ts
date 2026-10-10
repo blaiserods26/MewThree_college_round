@@ -198,10 +198,22 @@ export async function runPatchVerificationDirect(
         });
       } else if (targetMatches === 0) {
         viewportPassed = false;
+        let driftDiag: any = null;
+        try {
+          driftDiag = await page.evaluate(() => {
+            return (window as any).__PATCHWORK_PREVIEW__?.drift;
+          });
+        } catch {}
+
+        let errorMsg = `Target element '${selector}' not found on page.`;
+        if (driftDiag && driftDiag.isDrifted && driftDiag.candidate) {
+          errorMsg = `Target element '${selector}' not found on page (DOM Drift Detected). Identified candidate '${driftDiag.candidate.selector}' with score ${(driftDiag.score * 100).toFixed(0)}% [${driftDiag.tier}].`;
+        }
+
         allAssertions.push({
           assertionId: `${vp.name.toLowerCase()}-target-unique`,
           passed: false,
-          errorMessage: `Target element '${selector}' not found on page.`,
+          errorMessage: errorMsg,
         });
       } else {
         viewportPassed = false;

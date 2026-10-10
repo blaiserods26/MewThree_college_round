@@ -63,10 +63,31 @@ export function extractTargetFingerprint(element: Element): TargetFingerprint {
   const parentContext = element.parentElement?.id || element.parentElement?.className || undefined;
   const selector = generateElementSelector(element);
 
+  // Extract nearby sibling context
+  let siblingContext: string | undefined = undefined;
+  const prevSibling = element.previousElementSibling;
+  const nextSibling = element.nextElementSibling;
+  const siblingSnippets: string[] = [];
+  if (prevSibling) {
+    const prevText = (prevSibling.textContent || "").trim().substring(0, 40);
+    if (prevText) siblingSnippets.push(prevText);
+    else if (prevSibling.id) siblingSnippets.push(`#${prevSibling.id}`);
+  }
+  if (nextSibling) {
+    const nextText = (nextSibling.textContent || "").trim().substring(0, 40);
+    if (nextText) siblingSnippets.push(nextText);
+    else if (nextSibling.id) siblingSnippets.push(`#${nextSibling.id}`);
+  }
+  if (siblingSnippets.length > 0) {
+    siblingContext = siblingSnippets.join(" | ");
+  }
+
   const stableAttributes: Record<string, string> = {};
   if (element.getAttribute("name")) stableAttributes["name"] = element.getAttribute("name")!;
   if (element.getAttribute("type")) stableAttributes["type"] = element.getAttribute("type")!;
   if (element.getAttribute("data-testid")) stableAttributes["data-testid"] = element.getAttribute("data-testid")!;
+  if (element.getAttribute("data-action")) stableAttributes["data-action"] = element.getAttribute("data-action")!;
+  if (element.getAttribute("aria-label")) stableAttributes["aria-label"] = element.getAttribute("aria-label")!;
 
   return {
     tag,
@@ -74,6 +95,7 @@ export function extractTargetFingerprint(element: Element): TargetFingerprint {
     accessibleName,
     text,
     parentContext,
+    siblingContext,
     selector,
     stableAttributes: Object.keys(stableAttributes).length > 0 ? stableAttributes : undefined,
   };

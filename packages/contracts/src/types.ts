@@ -36,7 +36,34 @@ export interface TargetFingerprint {
   text?: string;
   stableAttributes?: Record<string, string>;
   parentContext?: string;
+  siblingContext?: string;
   selector: string;
+}
+
+export interface SignalScoreBreakdown {
+  tag: number;
+  text: number;
+  roleAndAria: number;
+  stableAttributes: number;
+  context: number;
+  total: number;
+}
+
+export type ConfidenceTier = "high" | "review_required" | "stale";
+
+export interface FingerprintCandidateMatch {
+  element?: any;
+  selector: string;
+  score: number;
+  tier: ConfidenceTier;
+  breakdown: SignalScoreBreakdown;
+}
+
+export interface RebindPatchInput {
+  selector: string;
+  targetFingerprint?: Partial<TargetFingerprint>;
+  changeNote?: string;
+  actor?: AuditActor;
 }
 
 export type PatchOperationType =

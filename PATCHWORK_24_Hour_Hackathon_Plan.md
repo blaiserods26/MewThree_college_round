@@ -333,23 +333,23 @@ Do **not** implement arbitrary code execution as the default patch mechanism.
 
 Capture a combination of:
 
-- [ ] Tag name.
-- [ ] Accessible role and accessible name when available.
-- [ ] Relevant text content.
-- [ ] Stable attributes such as `data-testid`, if present.
-- [ ] Parent/container context.
-- [ ] Nearby text or sibling context.
-- [ ] Original selector as one signal, not the only signal.
+- [x] Tag name.
+- [x] Accessible role and accessible name when available.
+- [x] Relevant text content.
+- [x] Stable attributes such as `data-testid`, if present.
+- [x] Parent/container context.
+- [x] Nearby text or sibling context.
+- [x] Original selector as one signal, not the only signal.
 
 ### Step 5.2 — Detect stale targets
 
-- [ ] Mark a patch stale if its original target no longer resolves.
-- [ ] Detect when a selector matches multiple elements.
-- [ ] Search the current page for candidates matching the fingerprint.
-- [ ] Rank candidates with a deterministic weighted similarity score.
-- [ ] Show the best candidate and the signals supporting the match.
-- [ ] Require review when confidence is low or multiple candidates are close.
-- [ ] Do not automatically apply high-impact changes to an ambiguous target.
+- [x] Mark a patch stale if its original target no longer resolves.
+- [x] Detect when a selector matches multiple elements.
+- [x] Search the current page for candidates matching the fingerprint.
+- [x] Rank candidates with a deterministic weighted similarity score.
+- [x] Show the best candidate and the signals supporting the match.
+- [x] Require review when confidence is low or multiple candidates are close.
+- [x] Do not automatically apply high-impact changes to an ambiguous target.
 
 Suggested prototype thresholds (tune during testing):
 
@@ -361,19 +361,19 @@ These thresholds are heuristics, not proof of semantic correctness.
 
 ### Step 5.3 — Demonstrate recovery
 
-- [ ] Start with a working patch.
-- [ ] Change the target element's ID and move it into a wrapper using the site's simulated update.
-- [ ] Run target resolution again.
-- [ ] Show the patch becoming stale.
-- [ ] Show the candidate and matching evidence.
-- [ ] Allow the developer to confirm/rebind the target.
-- [ ] Re-run verification before the recovered patch can be published.
+- [x] Start with a working patch.
+- [x] Change the target element's ID and move it into a wrapper using the site's simulated update.
+- [x] Run target resolution again.
+- [x] Show the patch becoming stale.
+- [x] Show the candidate and matching evidence.
+- [x] Allow the developer to confirm/rebind the target.
+- [x] Re-run verification before the recovered patch can be published.
 
 **Phase exit check**
 
-- [ ] A changed ID is not automatically treated as a lost patch if other signals match.
-- [ ] Ambiguous candidates require human review.
-- [ ] A rebound patch must pass verification again.
+- [x] A changed ID is not automatically treated as a lost patch if other signals match.
+- [x] Ambiguous candidates require human review.
+- [x] A rebound patch must pass verification again.
 
 ---
 

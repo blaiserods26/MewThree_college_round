@@ -45,6 +45,28 @@ describe("Playwright Automated Verification Worker & Gate Enforcement", () => {
         return;
       }
 
+      if (url.pathname.startsWith("/drifted") || url.searchParams.get("drift") === "true") {
+        res.writeHead(200, { "Content-Type": "text/html" });
+        res.end(`
+          <!DOCTYPE html>
+          <html>
+          <head><title>Mock Storefront - Drifted</title></head>
+          <body style="font-family: sans-serif; padding: 24px;">
+            <h1>Mock Storefront</h1>
+            <div id="checkout-summary">
+              <div class="payment-drawer">
+                <button id="pay-now-action" class="btn btn-checkout" type="button" aria-label="Complete Order" style="background-color: rgb(0, 0, 255); color: #fff; padding: 12px 24px; border: none; font-size: 16px; cursor: pointer;">
+                  Complete Order
+                </button>
+              </div>
+            </div>
+            <script type="module" src="/patchwork.js" data-website-id="demo-store" data-api-base="${apiBaseUrl}/api"></script>
+          </body>
+          </html>
+        `);
+        return;
+      }
+
       // Serve HTML page with target checkout button
       res.writeHead(200, { "Content-Type": "text/html" });
       res.end(`
@@ -156,7 +178,7 @@ describe("Playwright Automated Verification Worker & Gate Enforcement", () => {
         websiteId: "demo-store",
         name: "Broken button patch",
         targetFingerprint: {
-          tag: "button",
+          tag: "article",
           selector: "#non-existent-button-xyz",
         },
         operation: {
@@ -203,4 +225,114 @@ describe("Playwright Automated Verification Worker & Gate Enforcement", () => {
     expect(releaseErr.error).toContain("verification_failed");
     expect(releaseErr.error).toContain("Only 'verified' patches can be released");
   }, 30000);
+
+  it(
+    "detects DOM drift in Playwright, flags patch as stale with candidate recovery, executes target rebind, re-verifies, and releases",
+    async () => {
+    // 1. Create patch targeting #checkout-btn
+    const patchRes = await fetch(`${apiBaseUrl}/api/patches`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        websiteId: "demo-store",
+        name: "Mobile checkout visibility",
+        targetFingerprint: {
+          tag: "button",
+          role: "button",
+          selector: "#checkout-btn",
+          text: "Complete Order",
+          accessibleName: "Complete Order",
+          parentContext: "checkout-summary",
+        },
+        operation: {
+          type: "style.set",
+          property: "background-color",
+          value: "#10b981",
+        },
+        actor: { id: "dev-1", name: "Dev", role: "developer" },
+      }),
+    });
+    const patch = await patchRes.json();
+
+    // 2. Trigger Playwright verification against the drifted site (/drifted)
+    const driftedSiteUrl = `${storefrontBaseUrl}/drifted`;
+    const verifyRes = await fetch(`${apiBaseUrl}/api/patches/${patch.id}/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        websiteBaseUrl: driftedSiteUrl,
+      }),
+    });
+
+    expect(verifyRes.status).toBe(200);
+    const run = await verifyRes.json();
+    expect(run.status).toBe("failed");
+    expect(run.error).toContain("DOM Drift Detected");
+    expect(run.error).toContain("#pay-now-action");
+
+    // Patch status must be flagged as stale
+    const stalePatchRes = await fetch(`${apiBaseUrl}/api/patches/${patch.id}`);
+    const stalePatch = await stalePatchRes.json();
+    expect(stalePatch.status).toBe("stale");
+
+    // 3. Execute target rebind to #pay-now-action via API
+    const rebindRes = await fetch(`${apiBaseUrl}/api/patches/${patch.id}/rebind`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        selector: "#pay-now-action",
+        changeNote: "Rebound target to #pay-now-action after site migration",
+        actor: { id: "lead-dev", name: "Lead", role: "developer" },
+      }),
+    });
+    expect(rebindRes.status).toBe(200);
+    const reboundPatch = await rebindRes.json();
+    expect(reboundPatch.currentVersion).toBe(2);
+    expect(reboundPatch.status).toBe("previewing");
+    expect(reboundPatch.targetFingerprint.selector).toBe("#pay-now-action");
+
+    // Gating check: attempt to publish before re-verification must be rejected
+    const blockedReleaseRes = await fetch(`${apiBaseUrl}/api/websites/demo-store/releases`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        patchIds: [patch.id],
+        actor: { id: "lead-dev", name: "Lead", role: "developer" },
+      }),
+    });
+    expect(blockedReleaseRes.status).toBe(400);
+
+    // 4. Run Playwright verification on the rebound patch
+    const reVerifyRes = await fetch(`${apiBaseUrl}/api/patches/${patch.id}/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        websiteBaseUrl: driftedSiteUrl,
+      }),
+    });
+    expect(reVerifyRes.status).toBe(200);
+    const reRun = await reVerifyRes.json();
+    expect(reRun.status).toBe("passed");
+
+    // Patch is now verified
+    const verifiedPatchRes = await fetch(`${apiBaseUrl}/api/patches/${patch.id}`);
+    const verifiedPatch = await verifiedPatchRes.json();
+    expect(verifiedPatch.status).toBe("verified");
+
+    // 5. Publish to production release now succeeds!
+    const releaseRes = await fetch(`${apiBaseUrl}/api/websites/demo-store/releases`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        patchIds: [patch.id],
+        actor: { id: "lead-dev", name: "Lead", role: "developer" },
+        changeSummary: "Deploying recovered checkout patch",
+      }),
+    });
+    expect(releaseRes.status).toBe(201);
+    const release = await releaseRes.json();
+    expect(release.status).toBe("active");
+    expect(release.version).toBe(1);
+  }, 45000);
 });
+
