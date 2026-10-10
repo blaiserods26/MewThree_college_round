@@ -1,0 +1,9 @@
+{
+  "name": "@patchwork/verification",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PATCHWORK automated verification runner: headless Playwright testing of patches in preview isolation",
+  "scripts": {
+    "test": "echo \"Verification stub ready for Phase 4\""
+  }
+}

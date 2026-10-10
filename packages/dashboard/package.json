@@ -1,0 +1,9 @@
+{
+  "name": "@patchwork/dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PATCHWORK operator dashboard: visual inspector, patch editor, verification panel, release history, and audit log",
+  "scripts": {
+    "dev": "echo \"Dashboard stub ready for Phase 2\""
+  }
+}

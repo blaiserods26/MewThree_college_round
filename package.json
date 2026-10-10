@@ -1,0 +1,17 @@
+{
+  "name": "patchwork",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PATCHWORK — Independent DOM patching, verification, and rollback platform",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "npm run test --workspace=packages/contracts",
+    "typecheck": "npm run typecheck --workspace=packages/contracts",
+    "build": "npm run build --workspace=packages/contracts"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

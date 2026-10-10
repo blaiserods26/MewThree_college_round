@@ -1,0 +1,9 @@
+{
+  "name": "@patchwork/storefront",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PATCHWORK demo storefront: controlled host target website with baseline and drifted layouts",
+  "scripts": {
+    "dev": "echo \"Storefront stub ready for Phase 2\""
+  }
+}

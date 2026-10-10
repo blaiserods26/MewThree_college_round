@@ -1,0 +1,9 @@
+{
+  "name": "@patchwork/runtime",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PATCHWORK client runtime: zero-dependency script injected into target website to apply patches safely",
+  "scripts": {
+    "build": "echo \"Runtime stub ready for Phase 2/3\""
+  }
+}
