@@ -6,7 +6,9 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PORT = 5173;
+const PORT = Number(process.env.DASHBOARD_PORT || process.env.PORT) || 5173;
+const API_BASE = process.env.PATCHWORK_API_BASE || "http://localhost:4000/api";
+const STOREFRONT_URL = process.env.STOREFRONT_URL || "http://localhost:3000";
 
 const MIME_TYPES = {
   ".html": "text/html",
@@ -20,6 +22,16 @@ const MIME_TYPES = {
 
 const server = http.createServer((req, res) => {
   const urlPath = req.url.split("?")[0];
+
+  // Runtime config for the browser, generated from environment variables.
+  if (urlPath === "/config.js") {
+    res.writeHead(200, { "Content-Type": "text/javascript", "Cache-Control": "no-store" });
+    res.end(
+      `window.PATCHWORK_CONFIG = ${JSON.stringify({ apiBase: API_BASE, storefrontUrl: STOREFRONT_URL })};`
+    );
+    return;
+  }
+
   const filePath = path.join(__dirname, urlPath === "/" ? "index.html" : urlPath);
 
   fs.readFile(filePath, (err, data) => {

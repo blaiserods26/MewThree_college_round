@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "bun run src/index.ts",
     "start": "node dist/index.js",
+    "reset": "node dist/reset.js",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "test": "bun test"

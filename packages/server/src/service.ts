@@ -19,8 +19,21 @@ import {
   validatePatchOperation,
   validatePatchTransition,
 } from "@patchwork/contracts";
-import { runPatchVerification } from "@patchwork/verification";
+import {
+  DEFAULT_VERIFICATION_TIMEOUT_MS,
+  runPatchVerification,
+  type VerifyPatchOptions,
+} from "@patchwork/verification";
 import { JsonFileStore } from "./store.js";
+
+/** Seam for the browser verification worker; replaceable in tests. */
+export type PatchVerifier = (options: VerifyPatchOptions) => Promise<VerificationRun>;
+
+export interface PatchServiceOptions {
+  verifier?: PatchVerifier;
+  /** Maximum time a verification may take before it is recorded as failed. */
+  verificationTimeoutMs?: number;
+}
 
 export interface CreatePatchInput {
   websiteId: string;
@@ -62,10 +75,24 @@ export interface ResolveConflictInput {
 }
 
 export class PatchService {
-  constructor(private store: JsonFileStore) {}
+  private verifier: PatchVerifier;
+  private verificationTimeoutMs: number;
+
+  constructor(
+    private store: JsonFileStore,
+    options: PatchServiceOptions = {}
+  ) {
+    this.verifier = options.verifier ?? runPatchVerification;
+    this.verificationTimeoutMs = options.verificationTimeoutMs ?? DEFAULT_VERIFICATION_TIMEOUT_MS;
+  }
 
   public listWebsites(): Website[] {
     return this.store.getWebsites();
+  }
+
+  /** Wipe all patches, releases, audit events and runs back to the seeded baseline. */
+  public resetDemoData(): void {
+    this.store.reset();
   }
 
   public getWebsite(id: string): Website | undefined {
@@ -307,6 +334,13 @@ export class PatchService {
   }
 
   public createRelease(input: CreateReleaseInput): Release {
+    if (!this.store.getWebsite(input.websiteId)) {
+      throw new Error(`Website '${input.websiteId}' not found.`);
+    }
+    if (input.patchIds.length === 0) {
+      throw new Error("Cannot create release: select at least one verified patch.");
+    }
+
     const patches = input.patchIds.map((id) => {
       const p = this.store.getPatch(id);
       if (!p) throw new Error(`Patch '${id}' not found.`);
@@ -501,12 +535,19 @@ export class PatchService {
     });
     this.store.addAuditEvent(startEvent);
 
-    // 3. Execute automated runner
-    const run = await runPatchVerification({
-      patch,
-      websiteBaseUrl,
-      apiBaseUrl: options.apiBaseUrl,
-    });
+    // 3. Execute automated runner. A crashed or hung worker must still end in a
+    //    recorded, visible failure rather than a patch stuck in 'previewing'.
+    let run: VerificationRun;
+    try {
+      run = await this.runVerifierWithTimeout({
+        patch,
+        websiteBaseUrl,
+        apiBaseUrl: options.apiBaseUrl,
+        timeoutMs: this.verificationTimeoutMs,
+      });
+    } catch (err: any) {
+      run = this.buildWorkerFailureRun(patch, err?.message || String(err));
+    }
 
     // 4. Save verification run
     this.store.saveVerificationRun(run);
@@ -547,6 +588,40 @@ export class PatchService {
     this.store.addAuditEvent(completionEvent);
 
     return run;
+  }
+
+  private async runVerifierWithTimeout(options: VerifyPatchOptions): Promise<VerificationRun> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () => reject(new Error(`Verification timed out after ${this.verificationTimeoutMs}ms.`)),
+        this.verificationTimeoutMs
+      );
+    });
+    try {
+      return await Promise.race([this.verifier(options), timeout]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+
+  private buildWorkerFailureRun(patch: Patch, message: string): VerificationRun {
+    const now = new Date().toISOString();
+    const error = `Verification worker failed: ${message}`;
+    return {
+      id: `ver-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      patchId: patch.id,
+      websiteId: patch.websiteId,
+      status: "failed",
+      viewport: { width: 1280, height: 800 },
+      startedAt: now,
+      completedAt: now,
+      durationMs: 0,
+      assertions: [
+        { assertionId: "verification-worker", passed: false, errorMessage: error },
+      ],
+      error,
+    };
   }
 
   public listVerificationRuns(patchId?: string): VerificationRun[] {

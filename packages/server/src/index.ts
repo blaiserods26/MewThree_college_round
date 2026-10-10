@@ -12,7 +12,9 @@ const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), "data", "patchwo
 
 const store = new JsonFileStore(DB_PATH);
 const service = new PatchService(store);
-const server = createServer(service);
+const server = createServer(service, {
+  enableDemoReset: process.env.ENABLE_DEMO_RESET === "true",
+});
 
 if (process.env.NODE_ENV !== "test") {
   server.listen(PORT, () => {

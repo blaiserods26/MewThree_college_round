@@ -27,7 +27,11 @@ export interface VerifyPatchOptions {
   apiBaseUrl?: string;
   viewports?: ViewportOption[];
   visualDiffThreshold?: number;
+  /** Hard ceiling for a whole verification run when delegated to the worker subprocess. */
+  timeoutMs?: number;
 }
+
+export const DEFAULT_VERIFICATION_TIMEOUT_MS = 90_000;
 
 /**
  * Normalizes CSS color values (rgb vs hex) for cross-browser comparison.
@@ -70,6 +74,8 @@ async function runViaNodeSubprocess(options: VerifyPatchOptions): Promise<Verifi
     ? path.join(currentDir, "cli.js")
     : path.resolve(currentDir, "../dist/cli.js");
 
+  const timeoutMs = options.timeoutMs ?? DEFAULT_VERIFICATION_TIMEOUT_MS;
+
   return new Promise((resolve, reject) => {
     const child = spawn("node", [cliPath], {
       stdio: ["pipe", "pipe", "pipe"],
@@ -77,6 +83,12 @@ async function runViaNodeSubprocess(options: VerifyPatchOptions): Promise<Verifi
 
     let stdout = "";
     let stderr = "";
+    let timedOut = false;
+
+    const timer = setTimeout(() => {
+      timedOut = true;
+      child.kill("SIGKILL");
+    }, timeoutMs);
 
     child.stdout.on("data", (chunk) => {
       stdout += chunk.toString();
@@ -86,7 +98,16 @@ async function runViaNodeSubprocess(options: VerifyPatchOptions): Promise<Verifi
       stderr += chunk.toString();
     });
 
+    child.on("error", (err) => {
+      clearTimeout(timer);
+      reject(new Error(`Verification worker could not start: ${err.message}`));
+    });
+
     child.on("close", (code) => {
+      clearTimeout(timer);
+      if (timedOut) {
+        return reject(new Error(`Verification worker timed out after ${timeoutMs}ms.`));
+      }
       if (code !== 0) {
         return reject(
           new Error(`Verification worker node process failed (code ${code}): ${stderr}`)

@@ -19,9 +19,29 @@ export class JsonFileStore {
     this.data = this.load();
   }
 
+  /** The known-good seed state: one demo website, nothing else. */
+  public static baseline(): DatabaseSchema {
+    const now = new Date().toISOString();
+    return {
+      websites: {
+        "demo-store": {
+          id: "demo-store",
+          name: "AeroStyle Storefront",
+          baseUrl: process.env.STOREFRONT_URL || "http://localhost:3000",
+          createdAt: now,
+          updatedAt: now,
+        },
+      },
+      patches: {},
+      releases: {},
+      auditEvents: [],
+      verificationRuns: [],
+    };
+  }
+
   private load(): DatabaseSchema {
-    try {
-      if (fs.existsSync(this.filePath)) {
+    if (fs.existsSync(this.filePath)) {
+      try {
         const raw = fs.readFileSync(this.filePath, "utf-8");
         const parsed = JSON.parse(raw);
         return {
@@ -31,25 +51,27 @@ export class JsonFileStore {
           auditEvents: parsed.auditEvents || [],
           verificationRuns: parsed.verificationRuns || [],
         };
+      } catch (err) {
+        // Never silently overwrite an unreadable database: keep it for recovery.
+        const backupPath = `${this.filePath}.corrupt-${Date.now()}`;
+        try {
+          fs.renameSync(this.filePath, backupPath);
+          console.warn(
+            `Database file was unreadable; preserved as '${backupPath}' and started from baseline.`,
+            err
+          );
+        } catch (renameErr) {
+          console.warn("Database file was unreadable and could not be preserved:", renameErr);
+        }
       }
-    } catch (err) {
-      console.warn("Failed to read database file, initializing empty:", err);
     }
-    return {
-      websites: {
-        "demo-store": {
-          id: "demo-store",
-          name: "AeroStyle Storefront",
-          baseUrl: "http://localhost:3000",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-      },
-      patches: {},
-      releases: {},
-      auditEvents: [],
-      verificationRuns: [],
-    };
+    return JsonFileStore.baseline();
+  }
+
+  /** Discard all patches, releases, audit events and runs; return to the baseline seed. */
+  public reset(): void {
+    this.data = JsonFileStore.baseline();
+    this.save();
   }
 
   public save(): void {

@@ -14,6 +14,8 @@ export type RollbackResult =
   | {
       success: true;
       newActiveReleaseId?: string;
+      /** True when no prior release existed and the site reverted to its unpatched baseline. */
+      restoredBaseline: boolean;
       updatedReleases: Release[];
       updatedPatches: Patch[];
       auditEvent: AuditEvent;
@@ -117,6 +119,7 @@ export function computeRollback(input: RollbackInput): RollbackResult {
   return {
     success: true,
     newActiveReleaseId: priorRelease?.id,
+    restoredBaseline: !priorRelease,
     updatedReleases,
     updatedPatches,
     auditEvent,

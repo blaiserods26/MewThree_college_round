@@ -1,10 +1,67 @@
 // PATCHWORK Dashboard Application
 (function () {
-  const API_BASE = "http://localhost:4000/api";
+  const CONFIG = window.PATCHWORK_CONFIG || {};
+  const API_BASE = CONFIG.apiBase || "http://localhost:4000/api";
+  const STOREFRONT_URL = CONFIG.storefrontUrl || "http://localhost:3000";
+  const STATE_KEY = "patchwork.dashboard.state.v1";
+
+  // Network failures surface as a bare "Failed to fetch"; replace with an actionable message.
+  const rawFetch = window.fetch.bind(window);
+  function fetch(input, init) {
+    return rawFetch(input, init).catch(() => {
+      throw new Error(
+        `Cannot reach the PATCHWORK API at ${API_BASE}. Check that the server is running, then retry.`
+      );
+    });
+  }
+
+  // Persist lightweight UI state so a page refresh returns the operator to where they were.
+  function loadSavedState() {
+    try {
+      return JSON.parse(window.localStorage.getItem(STATE_KEY) || "{}") || {};
+    } catch (e) {
+      return {};
+    }
+  }
+  function saveState() {
+    try {
+      window.localStorage.setItem(
+        STATE_KEY,
+        JSON.stringify({
+          tab: currentTab,
+          selectedPatchId,
+          search: searchInput ? searchInput.value : "",
+          status: filterStatusSelect ? filterStatusSelect.value : "",
+        })
+      );
+    } catch (e) {
+      /* storage unavailable (private mode): resilience feature only, safe to ignore */
+    }
+  }
+  const savedState = loadSavedState();
+
   let activeWebsiteId = "demo-store";
   let currentTab = "patches";
   let allPatches = [];
-  let selectedPatchId = null;
+  let selectedPatchId = savedState.selectedPatchId || null;
+
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function renderErrorState(container, message, retry) {
+    container.innerHTML = `
+      <div class="empty-state error-state" role="alert">
+        <div>⚠️ ${escapeHtml(message)}</div>
+        <button type="button" class="btn btn-secondary retry-btn" style="margin-top: 12px;">Retry</button>
+      </div>`;
+    const btn = container.querySelector(".retry-btn");
+    if (btn) btn.addEventListener("click", retry);
+  }
 
   // DOM Elements
   const websiteSelect = document.getElementById("website-select");
@@ -34,7 +91,7 @@
   let inspectorWindow = null;
   if (openInspectorBtn) {
     openInspectorBtn.addEventListener("click", () => {
-      inspectorWindow = window.open("http://localhost:3000", "PatchworkInspector");
+      inspectorWindow = window.open(STOREFRONT_URL, "PatchworkInspector");
       showToast("Storefront opened. Click an element to capture its fingerprint.", "info");
       setTimeout(() => {
         if (inspectorWindow) {
@@ -55,6 +112,8 @@
       showToast(`Captured target element: ${fp.selector}`, "success");
     }
   });
+  const createPatchBtn = document.getElementById("create-patch-btn");
+  const newPatchModal = document.getElementById("new-patch-modal");
   const closeModalBtn = document.getElementById("close-modal-btn");
   const cancelNewPatchBtn = document.getElementById("cancel-new-patch-btn");
   const newPatchForm = document.getElementById("new-patch-form");
@@ -66,6 +125,7 @@
       const tab = btn.getAttribute("data-tab");
       if (!tab) return;
       currentTab = tab;
+      saveState();
 
       document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
@@ -84,27 +144,36 @@
     const toast = document.createElement("div");
     toast.className = `toast toast-${type}`;
     const icon = type === "success" ? "✅" : type === "error" ? "❌" : "ℹ️";
-    toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+    toast.innerHTML = `<span>${icon}</span> <span class="toast-message"></span>`;
+    toast.querySelector(".toast-message").textContent = message;
     toastContainer.appendChild(toast);
+    // Errors stay longer so the operator can actually read the reason.
     setTimeout(() => {
       toast.style.opacity = "0";
       setTimeout(() => toast.remove(), 300);
-    }, 3500);
+    }, type === "error" ? 7000 : 3500);
   }
 
   // Load Patches
   async function loadPatches() {
     try {
       const res = await fetch(`${API_BASE}/patches?websiteId=${activeWebsiteId}`);
-      if (!res.ok) throw new Error("Failed to load patches");
+      if (!res.ok) throw new Error(`Failed to load patches (HTTP ${res.status})`);
       allPatches = await res.json();
       patchesCounter.textContent = String(allPatches.length);
+      connectionBadge.classList.add("connected");
+      connectionBadge.style.background = "";
+      connectionText.textContent = "Engine Online";
+      if (selectedPatchId && !allPatches.some((p) => p.id === selectedPatchId)) {
+        selectedPatchId = null; // saved selection no longer exists (e.g. after a demo reset)
+        saveState();
+      }
       renderPatchList();
     } catch (err) {
       connectionBadge.classList.remove("connected");
       connectionBadge.style.background = "rgba(239, 68, 68, 0.15)";
-      connectionText.textContent = "Engine Offline (Start port 4000)";
-      patchListContainer.innerHTML = `<div class="empty-state">Unable to connect to PATCHWORK API at ${API_BASE}.</div>`;
+      connectionText.textContent = "Engine Offline";
+      renderErrorState(patchListContainer, err.message, loadPatches);
     }
   }
 
@@ -162,6 +231,7 @@
   // Select Patch
   function selectPatch(id) {
     selectedPatchId = id;
+    saveState();
     renderPatchList();
     renderPatchDetail();
   }
@@ -554,8 +624,12 @@
         const res = await fetch(`${API_BASE}/patches/${patch.id}/verify`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ websiteBaseUrl: "http://localhost:3000" }),
+          body: JSON.stringify({ websiteBaseUrl: STOREFRONT_URL }),
         });
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          throw new Error(errBody.error || `Verification request failed (HTTP ${res.status})`);
+        }
         const run = await res.json();
         if (run.status === "passed") {
           showToast(`Verification passed in ${run.durationMs}ms! Patch is verified.`, "success");
@@ -608,7 +682,7 @@
           await fetch(`${API_BASE}/patches/${brokenPatch.id}/verify`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ websiteBaseUrl: "http://localhost:3000" }),
+            body: JSON.stringify({ websiteBaseUrl: STOREFRONT_URL }),
           });
 
           await loadPatches();
@@ -859,7 +933,7 @@
   }
 
   function renderLifecycleActionButtons(patch, activeConflict) {
-    const previewUrl = `http://localhost:3000/?patchwork_preview=${patch.id}`;
+    const previewUrl = `${STOREFRONT_URL}/?patchwork_preview=${patch.id}`;
     const launchPreviewBtn = `
       <a href="${previewUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
         👁️ Preview Storefront
@@ -937,7 +1011,7 @@
   async function loadReleases() {
     try {
       const res = await fetch(`${API_BASE}/releases?websiteId=${activeWebsiteId}`);
-      if (!res.ok) throw new Error("Failed to load releases");
+      if (!res.ok) throw new Error(`Failed to load releases (HTTP ${res.status})`);
       const releases = await res.json();
       releasesCounter.textContent = String(releases.length);
 
@@ -973,7 +1047,11 @@
         )
         .join("");
     } catch (err) {
-      showToast("Failed to fetch releases", "error");
+      triggerRollbackBtn.disabled = true;
+      activeRelVersion.textContent = "Release state unavailable";
+      activeRelTimestamp.textContent = "";
+      activeRelPatchesList.innerHTML = "";
+      renderErrorState(releasesHistoryList, err.message, loadReleases);
     }
   }
 
@@ -994,7 +1072,12 @@
           throw new Error(err.error || "Rollback failed");
         }
         const data = await res.json();
-        showToast("Atomic release rollback executed successfully!", "success");
+        showToast(
+          data.restoredBaseline
+            ? "Rolled back: no earlier release existed, storefront is back on the unpatched baseline."
+            : "Atomic release rollback executed successfully!",
+          "success"
+        );
         await loadReleases();
         await loadPatches();
       } catch (err) {
@@ -1007,7 +1090,7 @@
   async function loadAuditEvents() {
     try {
       const res = await fetch(`${API_BASE}/audit-events?websiteId=${activeWebsiteId}`);
-      if (!res.ok) throw new Error("Failed to load audit events");
+      if (!res.ok) throw new Error(`Failed to load audit events (HTTP ${res.status})`);
       const events = await res.json();
       auditCounter.textContent = String(events.length);
 
@@ -1046,12 +1129,12 @@
             </div>
           </div>
           <div style="font-size: 0.82rem; color: #cbd5e1; margin-top: 4px;">
-            ${e.details?.reason ? `<span>${e.details.reason}</span>` : ""}
+            ${e.details?.reason ? `<span>${escapeHtml(e.details.reason)}</span>` : ""}
             ${e.details?.fromStatus && e.details?.toStatus ? `<span style="margin-left: 6px; font-family: var(--font-mono); color: #94a3b8;">(${e.details.fromStatus} → ${e.details.toStatus})</span>` : ""}
             ${e.details?.metadata?.strategy ? `<span class="chip" style="margin-left: 8px; font-size: 0.72rem;">Strategy: ${e.details.metadata.strategy}</span>` : ""}
           </div>
           <div style="font-size: 0.75rem; color: var(--text-faint); margin-top: 6px;">
-            Actor: <strong>${e.actor.name}</strong> (${e.actor.role})
+            Actor: <strong>${escapeHtml(e.actor.name)}</strong> (${escapeHtml(e.actor.role)})
           </div>
         </div>
       `;
@@ -1059,7 +1142,7 @@
         )
         .join("");
     } catch (err) {
-      showToast("Failed to load audit trail", "error");
+      renderErrorState(auditTimelineList, err.message, loadAuditEvents);
     }
   }
 
@@ -1258,8 +1341,22 @@
   });
 
   // Filters
-  searchInput.addEventListener("input", renderPatchList);
-  filterStatusSelect.addEventListener("change", renderPatchList);
+  searchInput.addEventListener("input", () => {
+    saveState();
+    renderPatchList();
+  });
+  filterStatusSelect.addEventListener("change", () => {
+    saveState();
+    renderPatchList();
+  });
+
+  // Restore UI state from before a refresh
+  if (savedState.search) searchInput.value = savedState.search;
+  if (savedState.status) filterStatusSelect.value = savedState.status;
+  if (savedState.tab && savedState.tab !== "patches") {
+    const tabBtn = document.querySelector(`.tab-btn[data-tab="${savedState.tab}"]`);
+    if (tabBtn) tabBtn.click();
+  }
 
   // Initial Boot
   loadPatches();

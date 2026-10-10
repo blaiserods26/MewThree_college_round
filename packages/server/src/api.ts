@@ -33,7 +33,12 @@ function parseJsonBody(req: http.IncomingMessage): Promise<any> {
   });
 }
 
-export function createServer(service: PatchService): http.Server {
+export interface ApiServerOptions {
+  /** Exposes POST /api/admin/reset to wipe data back to the demo baseline. Off by default. */
+  enableDemoReset?: boolean;
+}
+
+export function createServer(service: PatchService, options: ApiServerOptions = {}): http.Server {
   return http.createServer(async (req, res) => {
     // Handle CORS preflight
     if (req.method === "OPTIONS") {
@@ -51,6 +56,21 @@ export function createServer(service: PatchService): http.Server {
     const method = req.method || "GET";
 
     try {
+      // 0. Health & demo administration
+      if (pathname === "/api/health" && method === "GET") {
+        return sendJson(res, 200, { status: "ok" });
+      }
+
+      if (pathname === "/api/admin/reset" && method === "POST") {
+        if (!options.enableDemoReset) {
+          return sendJson(res, 403, {
+            error: "Demo reset is disabled. Start the server with ENABLE_DEMO_RESET=true.",
+          });
+        }
+        service.resetDemoData();
+        return sendJson(res, 200, { status: "reset" });
+      }
+
       // 1. Websites Endpoints
       if (pathname === "/api/websites" && method === "GET") {
         return sendJson(res, 200, service.listWebsites());
@@ -268,7 +288,9 @@ export function createServer(service: PatchService): http.Server {
 
       return sendJson(res, 404, { error: "Endpoint not found" });
     } catch (err: any) {
-      return sendJson(res, 400, { error: err.message || "An error occurred" });
+      const message: string = err?.message || "An error occurred";
+      const isNotFound = /^(Patch|Website|Release) '.*' not found\.?$/.test(message);
+      return sendJson(res, isNotFound ? 404 : 400, { error: message });
     }
   });
 }
