@@ -51,15 +51,39 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  const filePath = path.join(__dirname, urlPath === "/" ? "index.html" : urlPath);
+  const distDir = path.join(__dirname, "dist");
+  const hasDist = fs.existsSync(path.join(distDir, "index.html"));
 
-  fs.readFile(filePath, (err, data) => {
+  let targetFile = null;
+
+  if (hasDist) {
+    if (urlPath === "/" || urlPath === "/index.html") {
+      targetFile = path.join(distDir, "index.html");
+    } else {
+      const distCandidate = path.join(distDir, urlPath);
+      if (fs.existsSync(distCandidate) && !fs.statSync(distCandidate).isDirectory()) {
+        targetFile = distCandidate;
+      } else {
+        const rootCandidate = path.join(__dirname, urlPath);
+        if (fs.existsSync(rootCandidate) && !fs.statSync(rootCandidate).isDirectory()) {
+          targetFile = rootCandidate;
+        } else {
+          // SPA fallback to dist/index.html
+          targetFile = path.join(distDir, "index.html");
+        }
+      }
+    }
+  } else {
+    targetFile = path.join(__dirname, urlPath === "/" ? "index.html" : urlPath);
+  }
+
+  fs.readFile(targetFile, (err, data) => {
     if (err) {
       res.writeHead(404, { "Content-Type": "text/plain" });
       res.end("404 Not Found");
       return;
     }
-    const ext = path.extname(filePath);
+    const ext = path.extname(targetFile);
     res.writeHead(200, { "Content-Type": MIME_TYPES[ext] || "text/plain" });
     res.end(data);
   });

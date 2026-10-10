@@ -4,4 +4,5 @@ export * from "./operations.js";
 export * from "./audit.js";
 export * from "./rollback.js";
 export * from "./conflicts.js";
+export * from "./evidence.js";
 export * from "./ai.js";

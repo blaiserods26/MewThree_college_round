@@ -6,6 +6,20 @@
   "description": "PATCHWORK operator dashboard: visual inspector, patch editor, verification panel, release history, and audit log",
   "scripts": {
     "dev": "node server.js",
+    "typecheck": "tsc --noEmit",
+    "build": "vite build && node -e \"import('node:fs').then(fs=>{ if (fs.existsSync('dist/workbench.html')) fs.copyFileSync('dist/workbench.html','dist/index.html'); })\"",
     "start": "node server.js"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.55.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "vite": "^8.3.4"
   }
 }

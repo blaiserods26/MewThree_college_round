@@ -18,6 +18,10 @@ import {
   type PatchConflict,
   validatePatchOperation,
   validatePatchTransition,
+  computeBlastRadius,
+  computeReadinessDecision,
+  type PatchEvidenceRecord,
+  type ReleaseHealthCheckResult,
 } from "@patchwork/contracts";
 import {
   DEFAULT_VERIFICATION_TIMEOUT_MS,
@@ -848,5 +852,156 @@ export class PatchService {
       throw new Error(`Patch '${patchId}' not found.`);
     }
     return this.aiService.disambiguateTarget({ patch, candidates });
+  }
+
+  public getPatchEvidence(patchId: string): PatchEvidenceRecord {
+    const patch = this.store.getPatch(patchId);
+    if (!patch) {
+      throw new Error(`Patch '${patchId}' not found.`);
+    }
+
+    const runs = this.store.getVerificationRuns(patchId);
+    const latestRun = runs[0];
+    const rawConflicts = this.checkPatchConflicts(patchId);
+    const conflicts: ConflictDetectionResult = {
+      hasConflicts: rawConflicts.conflicts.length > 0,
+      conflicts: rawConflicts.conflicts,
+    };
+    const blastRadius = computeBlastRadius(patch, conflicts, latestRun);
+    const readiness = computeReadinessDecision(patch, blastRadius, latestRun);
+
+    return {
+      patchId: patch.id,
+      patchVersion: patch.currentVersion,
+      websiteId: patch.websiteId,
+      targetFingerprint: patch.targetFingerprint,
+      operation: patch.operation,
+      status: patch.status,
+      readinessDecision: readiness.decision,
+      readinessReasons: readiness.reasons,
+      blastRadius,
+      latestVerification: latestRun,
+      verificationRunsCount: runs.length,
+      conflicts,
+      updatedAt: patch.updatedAt,
+    };
+  }
+
+  public async checkReleaseHealth(
+    websiteId: string,
+    actor: AuditActor = { id: "health-monitor", name: "Patch Health Monitor", role: "automated-system" }
+  ): Promise<ReleaseHealthCheckResult> {
+    const website = this.store.getWebsite(websiteId);
+    if (!website) {
+      throw new Error(`Website '${websiteId}' not found.`);
+    }
+
+    const activeRelease = this.getActiveRelease(websiteId);
+    if (!activeRelease || activeRelease.patchIds.length === 0) {
+      return {
+        status: "baseline",
+        websiteId,
+        checkedAt: new Date().toISOString(),
+        patchesChecked: 0,
+        results: [],
+        recommendation: "Storefront is running clean baseline with no active patches deployed.",
+      };
+    }
+
+    const results: ReleaseHealthCheckResult["results"] = [];
+    let hasFailure = false;
+    let hasDrift = false;
+
+    for (const patchId of activeRelease.patchIds) {
+      const patch = this.store.getPatch(patchId);
+      if (!patch) {
+        results.push({
+          patchId,
+          patchName: "Unknown Patch",
+          targetSelector: "unknown",
+          status: "failed",
+          details: `Patch '${patchId}' record missing in database.`,
+        });
+        hasFailure = true;
+        continue;
+      }
+
+      // Run live verification recheck
+      const run = await this.verifyPatch(patchId, { actor });
+      if (run.status === "passed") {
+        results.push({
+          patchId: patch.id,
+          patchName: patch.name,
+          targetSelector: patch.targetFingerprint.selector,
+          status: "healthy",
+          runId: run.id,
+          details: "Verified live element presence, allowlisted style, and zero console errors.",
+        });
+      } else if (run.error?.includes("DOM Drift Detected") || run.error?.includes("not found")) {
+        results.push({
+          patchId: patch.id,
+          patchName: patch.name,
+          targetSelector: patch.targetFingerprint.selector,
+          status: "drifted",
+          runId: run.id,
+          details: run.error || "Target selector drifted or absent on live storefront.",
+        });
+        hasDrift = true;
+      } else {
+        results.push({
+          patchId: patch.id,
+          patchName: patch.name,
+          targetSelector: patch.targetFingerprint.selector,
+          status: "failed",
+          runId: run.id,
+          details: run.error || "Assertion failure during health check.",
+        });
+        hasFailure = true;
+      }
+    }
+
+    const overallStatus: ReleaseHealthCheckResult["status"] = hasDrift
+      ? "target_missing"
+      : hasFailure
+      ? "degraded"
+      : "healthy";
+
+    let recommendation = "All active production patches are verified healthy on live storefront.";
+    if (overallStatus !== "healthy") {
+      recommendation = `Regressions detected in active release V${activeRelease.version}. Safe 1-click rollback recommended to restore previously working state.`;
+    }
+
+    // Record audit event
+    const auditEvent = createAuditEvent({
+      websiteId,
+      entityType: "release",
+      entityId: activeRelease.id,
+      action: "health.checked",
+      actor,
+      timestamp: new Date().toISOString(),
+      details: {
+        reason: `Automated health check executed on active release V${activeRelease.version}`,
+        metadata: {
+          overallStatus,
+          patchesChecked: activeRelease.patchIds.length,
+          recommendation,
+        },
+      },
+    });
+    this.store.addAuditEvent(auditEvent);
+
+    return {
+      status: overallStatus,
+      websiteId,
+      releaseId: activeRelease.id,
+      checkedAt: new Date().toISOString(),
+      patchesChecked: activeRelease.patchIds.length,
+      results,
+      recommendation,
+    };
+  }
+
+  public getAiService(): DefaultAiService {
+    return this.aiService;
   }
 }

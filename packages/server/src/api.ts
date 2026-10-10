@@ -90,6 +90,45 @@ export function createServer(service: PatchService, options: ApiServerOptions = 
         return sendJson(res, 200, service.getWebsiteConflicts(websiteId));
       }
 
+      // Website Release Health Check endpoint
+      const websiteHealthMatch = pathname.match(/^\/api\/websites\/([^/]+)\/check-health$/);
+      if (websiteHealthMatch && (method === "POST" || method === "GET")) {
+        const websiteId = websiteHealthMatch[1];
+        const body = method === "POST" ? await parseJsonBody(req).catch(() => ({})) : {};
+        const actor = body.actor || { id: "health-monitor", name: "Patch Health Monitor", role: "automated-system" };
+        const health = await service.checkReleaseHealth(websiteId, actor);
+        return sendJson(res, 200, health);
+      }
+
+      // AI Proposal endpoint
+      if (pathname === "/api/ai/proposal" && method === "POST") {
+        const body = await parseJsonBody(req);
+        const proposal = await service.getAiService().generatePatchProposal({
+          websiteId: body.websiteId || "demo-store",
+          prompt: body.problemDescription || body.prompt || "Fix mobile layout issue",
+          elementContext: {
+            tag: body.elementTag || "button",
+            selector: body.selectorContext || "#checkout-btn",
+          },
+        });
+        return sendJson(res, 200, { proposal, isMock: true });
+      }
+
+      // AI Failure Explanation endpoint
+      if (pathname === "/api/ai/explain-failure" && method === "POST") {
+        const body = await parseJsonBody(req);
+        const patch = service.getPatch(body.patchId);
+        if (!patch) return sendJson(res, 404, { error: "Patch not found" });
+        const runs = service.listVerificationRuns(patch.id);
+        const latestRun = runs[runs.length - 1];
+        if (!latestRun) return sendJson(res, 400, { error: "No verification run found for patch" });
+        const explanation = await service.getAiService().explainVerificationFailure({
+          patch,
+          run: latestRun,
+        });
+        return sendJson(res, 200, { ...explanation, isMock: true });
+      }
+
       // Active Release endpoint for runtime injection
       const activeRelMatch = pathname.match(/^\/api\/websites\/([^/]+)\/active-release$/);
       if (activeRelMatch && method === "GET") {
@@ -172,6 +211,18 @@ export function createServer(service: PatchService, options: ApiServerOptions = 
           );
         }
         return sendJson(res, 400, { error: "Either patchIds array or patchId string is required." });
+      }
+
+      // Patch Evidence Record endpoint
+      const patchEvidenceMatch = pathname.match(/^\/api\/patches\/([^/]+)\/evidence$/);
+      if (patchEvidenceMatch && method === "GET") {
+        const patchId = patchEvidenceMatch[1];
+        try {
+          const evidence = service.getPatchEvidence(patchId);
+          return sendJson(res, 200, evidence);
+        } catch (err: any) {
+          return sendJson(res, 404, { error: err.message });
+        }
       }
 
       // Patch Detail

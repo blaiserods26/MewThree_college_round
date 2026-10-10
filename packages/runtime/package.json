@@ -5,9 +5,9 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "tsc && bun build src/index.ts --outfile dist/patchwork.js",
+    "build": "tsc && esbuild src/index.ts --bundle --format=esm --outfile=dist/patchwork.js && node -e \"import('node:fs').then(fs=>fs.copyFileSync('dist/patchwork.js','../storefront/patchwork.js'))\"",
     "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "test": "node --import ../../test-register.mjs --import tsx --test test/*.test.ts"
   },
   "dependencies": {
     "@patchwork/contracts": "*"

@@ -1,4 +1,5 @@
 import type { TargetFingerprint } from "@patchwork/contracts";
+import { applyPatchToDom, revertPatchOnDom } from "./mutation.js";
 
 const AMBIGUOUS_CONTAINER_TAGS = new Set(["HTML", "BODY", "MAIN", "SECTION", "HEADER", "FOOTER"]);
 const AMBIGUOUS_CLASSES = new Set(["storefront-app", "store-main", "catalog-grid", "container"]);
@@ -211,12 +212,38 @@ export function initVisualInspector(options: InspectorOptions = {}) {
     return isEnabled;
   }
 
-  // Listen for activation messages from dashboard
+  // Listen for activation and live preview messages from dashboard
   win.addEventListener("message", (msg) => {
-    if (msg.data && msg.data.type === "PATCHWORK_TOGGLE_INSPECTOR") {
+    if (!msg.data) return;
+    if (msg.data.type === "PATCHWORK_TOGGLE_INSPECTOR") {
       toggleInspector(Boolean(msg.data.enabled));
+    } else if (msg.data.type === "PATCHWORK_PING_INSPECTOR") {
+      const targetWindow = win.opener || (win.parent !== win ? win.parent : null);
+      if (targetWindow) {
+        targetWindow.postMessage({ type: "PATCHWORK_INSPECTOR_READY", isEnabled }, "*");
+      }
+    } else if (msg.data.type === "PATCHWORK_LIVE_PREVIEW") {
+      const { patch } = msg.data;
+      if (patch && patch.operation) {
+        applyPatchToDom(patch, doc);
+      }
+    } else if (msg.data.type === "PATCHWORK_REVERT_PREVIEW") {
+      const { patch } = msg.data;
+      if (patch && patch.operation) {
+        revertPatchOnDom(patch, doc);
+      }
     }
   });
+
+  // Signal ready handshake to dashboard
+  const notifyReady = () => {
+    const targetWindow = win.opener || (win.parent !== win ? win.parent : null);
+    if (targetWindow) {
+      targetWindow.postMessage({ type: "PATCHWORK_INSPECTOR_READY", isEnabled }, "*");
+    }
+  };
+  notifyReady();
+  win.setTimeout(notifyReady, 500);
 
   return { toggleInspector };
 }

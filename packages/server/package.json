@@ -5,12 +5,12 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "dev": "bun run src/index.ts",
+    "dev": "node --import tsx src/index.ts",
     "start": "node dist/index.js",
     "reset": "node dist/reset.js",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "test": "node --import ../../test-register.mjs --import tsx --test test/*.test.ts"
   },
   "dependencies": {
     "@patchwork/contracts": "*",

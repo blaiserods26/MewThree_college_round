@@ -7,9 +7,9 @@
     "packages/*"
   ],
   "scripts": {
-    "test": "bun test",
-    "typecheck": "npm run typecheck --workspace=packages/contracts && npm run build --workspace=packages/contracts && npm run typecheck --workspace=packages/verification && npm run build --workspace=packages/verification && npm run typecheck --workspace=packages/server && npm run typecheck --workspace=packages/runtime",
-    "build": "npm run build --workspace=packages/contracts && npm run build --workspace=packages/verification && npm run build --workspace=packages/server && npm run build --workspace=packages/runtime",
+    "test": "node --import ./test-register.mjs --import tsx --test packages/contracts/test/*.test.ts packages/verification/test/*.test.ts packages/runtime/test/*.test.ts packages/server/test/*.test.ts packages/dashboard/test/*.test.ts",
+    "typecheck": "npm run typecheck --workspace=packages/contracts && npm run build --workspace=packages/contracts && npm run typecheck --workspace=packages/verification && npm run build --workspace=packages/verification && npm run typecheck --workspace=packages/server && npm run typecheck --workspace=packages/runtime && npm run typecheck --workspace=packages/dashboard",
+    "build": "npm run build --workspace=packages/contracts && npm run build --workspace=packages/verification && npm run build --workspace=packages/server && npm run build --workspace=packages/runtime && npm run build --workspace=packages/dashboard",
     "demo:reset": "npm run reset --workspace=packages/server",
     "start": "start_all.bat",
     "start:server": "npm run start --workspace=packages/server",
@@ -18,7 +18,10 @@
   },
   "devDependencies": {
     "@types/node": "^26.6.5",
+    "esbuild": "^0.28.2",
+    "expect": "^30.5.2",
     "happy-dom": "^20.14.6",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3"
   }
 }

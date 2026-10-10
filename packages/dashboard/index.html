@@ -24,6 +24,24 @@
             <option value="demo-store">AeroStyle Storefront (http://localhost:3000)</option>
           </select>
         </div>
+
+        <div class="viewport-controls-toolbar">
+          <div class="btn-group viewport-btn-group">
+            <button id="btn-vp-desktop" class="vp-btn active" type="button" title="Desktop Viewport (1280px)">
+              <i data-lucide="monitor" style="width:14px;height:14px;"></i> 1280px
+            </button>
+            <button id="btn-vp-tablet" class="vp-btn" type="button" title="Tablet Viewport (768px)">
+              <i data-lucide="tablet" style="width:14px;height:14px;"></i> 768px
+            </button>
+            <button id="btn-vp-mobile" class="vp-btn" type="button" title="Mobile Viewport (375px)">
+              <i data-lucide="smartphone" style="width:14px;height:14px;"></i> 375px
+            </button>
+            <button id="btn-vp-fill" class="vp-btn" type="button" title="Responsive Fill Width (100%)">
+              <i data-lucide="maximize" style="width:14px;height:14px;"></i> Auto
+            </button>
+          </div>
+          <span id="canvas-dimensions-label" class="canvas-dim-badge">1280 × 800</span>
+        </div>
       </div>
 
       <div class="header-right">
@@ -45,6 +63,11 @@
 
     <!-- Main Navigation Tabs -->
     <nav class="nav-tabs">
+      <button id="tab-studio" class="tab-btn" type="button" data-tab="studio">
+        <span class="tab-icon"><i data-lucide="layout"></i></span>
+        <span>Studio Canvas</span>
+        <span class="studio-live-indicator">LIVE</span>
+      </button>
       <button id="tab-patches" class="tab-btn active" type="button" data-tab="patches">
         <span class="tab-icon"><i data-lucide="file-text"></i></span>
         <span>Patch Explorer</span>
@@ -55,6 +78,11 @@
         <span>Releases & Rollback</span>
         <span id="releases-counter-badge" class="count-pill">0</span>
       </button>
+      <button id="tab-health" class="tab-btn" type="button" data-tab="health">
+        <span class="tab-icon"><i data-lucide="activity"></i></span>
+        <span>Health Monitor</span>
+        <span id="health-status-badge" class="status-pill status-healthy">HEALTHY</span>
+      </button>
       <button id="tab-audit" class="tab-btn" type="button" data-tab="audit">
         <span class="tab-icon"><i data-lucide="scroll-text"></i></span>
         <span>Audit Trail</span>
@@ -64,6 +92,152 @@
 
     <!-- Content Workspace -->
     <main class="workspace-area">
+      <!-- VIEW 0: VISUAL HOTFIX STUDIO -->
+      <section id="view-studio" class="view-panel">
+        <div class="studio-workspace">
+          <!-- Canvas Left/Center Area -->
+          <div class="studio-canvas-area">
+            <!-- Studio Toolbar -->
+            <div class="studio-canvas-toolbar">
+              <div class="canvas-bar-left">
+                <button id="btn-toggle-studio-inspector" class="btn btn-inspect" type="button">
+                  <i data-lucide="crosshair" style="width:15px;height:15px;"></i>
+                  <span id="studio-inspect-btn-text">Select Element on Canvas</span>
+                </button>
+                <div class="canvas-url-bar">
+                  <span class="url-lock"><i data-lucide="lock" style="width:12px;height:12px;"></i></span>
+                  <span id="studio-storefront-url-text" class="url-text">http://localhost:3000/</span>
+                  <button id="btn-reload-canvas-iframe" class="icon-btn" type="button" title="Reload Canvas Storefront">
+                    <i data-lucide="rotate-cw" style="width:13px;height:13px;"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="canvas-bar-right">
+                <span id="studio-handshake-status" class="canvas-badge handshake-ready">
+                  <span class="status-dot"></span> Bridge Ready
+                </span>
+                <span id="studio-active-mode-badge" class="canvas-badge mode-baseline">
+                  Storefront Baseline
+                </span>
+              </div>
+            </div>
+
+            <!-- Iframe Canvas Bezel Container -->
+            <div class="studio-canvas-viewport-wrapper">
+              <div id="studio-canvas-frame" class="studio-canvas-frame vp-desktop">
+                <iframe id="storefront-preview-iframe" src="http://localhost:3000" title="AeroStyle Storefront Canvas"></iframe>
+              </div>
+            </div>
+
+            <!-- Bottom Collapsible Verification Drawer -->
+            <div id="studio-verification-drawer" class="studio-drawer collapsed">
+              <div class="studio-drawer-header" id="btn-toggle-verification-drawer">
+                <div class="drawer-header-left">
+                  <i data-lucide="shield-check" style="width:16px;height:16px;color:var(--accent-emerald);"></i>
+                  <span class="drawer-title">Proof-Carrying Verification & Release Gate</span>
+                  <span id="drawer-gate-status-pill" class="status-badge status-verified">Gate Ready</span>
+                </div>
+                <div class="drawer-header-right">
+                  <span id="drawer-toggle-text">Show Details</span>
+                  <i data-lucide="chevron-up" class="drawer-chevron" style="width:16px;height:16px;"></i>
+                </div>
+              </div>
+              <div id="studio-drawer-content" class="studio-drawer-content">
+                <div id="studio-drawer-evidence-body" class="drawer-evidence-grid">
+                  <!-- Dynamically populated via app.js -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Contextual Inspector -->
+          <div class="studio-inspector-pane">
+            <div class="inspector-header">
+              <div class="inspector-title-row">
+                <h3 class="inspector-heading">Contextual Inspector</h3>
+                <span id="studio-inspector-confidence-pill" class="confidence-pill confidence-high">98% High Confidence</span>
+              </div>
+              <p class="inspector-subtext">Select element, mutate with allowlisted operations, test in isolated preview, verify, and release.</p>
+            </div>
+
+            <div class="inspector-body">
+              <!-- Target Element Section -->
+              <div class="inspector-section">
+                <div class="section-label-row">
+                  <span class="section-label">Target Element</span>
+                  <span id="inspector-element-role" class="chip">button</span>
+                </div>
+                <div class="element-tag-display">
+                  <code id="inspector-element-tag" class="element-tag-code">&lt;button id="checkout-btn"&gt;</code>
+                </div>
+                <div class="form-group" style="margin-top: 8px;">
+                  <label for="inspector-selector-input">Target CSS Selector</label>
+                  <input id="inspector-selector-input" class="mono-input" type="text" value="#checkout-btn" />
+                </div>
+              </div>
+
+              <!-- Blast Radius & Risk Assessment Section -->
+              <div class="inspector-section blast-radius-section">
+                <div class="section-label-row">
+                  <span class="section-label">Blast Radius & Risk Assessment</span>
+                  <span id="inspector-risk-badge" class="risk-badge risk-low">Low Risk</span>
+                </div>
+                <div id="inspector-risk-reasons-list" class="risk-reasons-box">
+                  <div class="risk-reason-item">✓ Single unique DOM element</div>
+                  <div class="risk-reason-item">✓ Allowlisted cosmetic style mutation</div>
+                  <div class="risk-reason-item">✓ Zero overlapping patch collisions</div>
+                </div>
+              </div>
+
+              <!-- Patch Operation Editor Section -->
+              <div class="inspector-section">
+                <span class="section-label">Hotfix Operation</span>
+                <div class="form-group" style="margin-top: 8px;">
+                  <label for="inspector-op-type-select">Operation Type</label>
+                  <select id="inspector-op-type-select">
+                    <option value="style.set">style.set (Allowlisted CSS Property)</option>
+                    <option value="text.set">text.set (Element Text Content)</option>
+                    <option value="attribute.set">attribute.set (Safe DOM Attribute)</option>
+                    <option value="element.show">element.show (Make Visible)</option>
+                    <option value="element.hide">element.hide (Hide Element)</option>
+                  </select>
+                </div>
+
+                <div id="inspector-style-inputs" class="form-row" style="margin-top: 8px;">
+                  <div class="form-group">
+                    <label for="inspector-prop-input">CSS Property</label>
+                    <input id="inspector-prop-input" type="text" value="display" />
+                  </div>
+                  <div class="form-group">
+                    <label for="inspector-val-input">CSS Value</label>
+                    <input id="inspector-val-input" type="text" value="inline-block" />
+                  </div>
+                </div>
+
+                <div class="inspector-action-buttons">
+                  <button id="btn-studio-preview-patch" class="btn btn-secondary" type="button" title="Apply change directly to canvas in isolated preview">
+                    <i data-lucide="eye" style="width:14px;height:14px;"></i> Live Preview
+                  </button>
+                  <button id="btn-studio-reset-preview" class="btn btn-secondary" type="button" title="Revert canvas to original unpatched baseline">
+                    <i data-lucide="rotate-ccw" style="width:14px;height:14px;"></i> Reset
+                  </button>
+                </div>
+              </div>
+
+              <!-- Verification & Publication Actions -->
+              <div class="inspector-section inspector-footer-actions">
+                <button id="btn-studio-verify-patch" class="btn btn-secondary" type="button" style="width: 100%; margin-bottom: 8px;">
+                  <i data-lucide="zap" style="width:14px;height:14px;"></i> Run Verification
+                </button>
+                <button id="btn-studio-save-patch" class="btn btn-primary" type="button" style="width: 100%;">
+                  <i data-lucide="save" style="width:14px;height:14px;"></i> Save & Publish Hotfix
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- VIEW 1: PATCH EXPLORER -->
       <section id="view-patches" class="view-panel active">
         <div class="split-pane">
@@ -134,6 +308,44 @@
             <h3 class="section-heading">Deployment Release History</h3>
             <div id="releases-history-list" class="releases-table-container">
               <!-- Injected dynamically -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: POST-RELEASE PATCH HEALTH MONITOR -->
+      <section id="view-health" class="view-panel">
+        <div class="health-container">
+          <div class="health-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: rgba(30, 41, 59, 0.4); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 18px 24px;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+                <h2 style="font-size: 1.25rem; font-weight: 700; color: #f8fafc; margin: 0;">Post-Release Patch Health Monitor</h2>
+                <span id="health-overall-pill" class="status-badge status-verified">Healthy</span>
+              </div>
+              <p style="font-size: 0.85rem; color: var(--text-faint); margin: 0;">Automated continuous observable checks for live storefront DOM drift, element presence, and regression detection.</p>
+            </div>
+            <button id="btn-run-health-check" class="btn btn-primary" type="button" style="display: flex; align-items: center; gap: 8px;">
+              <i data-lucide="activity" style="width:16px;height:16px;"></i> Run Live Health Check
+            </button>
+          </div>
+
+          <div id="health-active-release-card" class="active-release-banner" style="margin-bottom: 20px;">
+            <div class="active-release-info">
+              <div class="banner-tag">ACTIVE MONITORING TARGET</div>
+              <h2 id="health-rel-version" class="active-version-title">Release V1</h2>
+              <p id="health-rel-meta" class="active-rel-meta">Checking live target storefront...</p>
+            </div>
+            <div class="active-release-actions">
+              <button id="health-rollback-btn" class="btn btn-danger hidden" type="button">
+                <i data-lucide="alert-triangle" style="width:16px;height:16px;"></i> Safe 1-Click Rollback
+              </button>
+            </div>
+          </div>
+
+          <div class="health-checks-section">
+            <h3 class="section-heading" style="margin-bottom: 12px;">Active Patches Health Diagnostics</h3>
+            <div id="health-check-results-container" class="health-results-list">
+              <div class="empty-state">Click "Run Live Health Check" to re-verify all active production patches.</div>
             </div>
           </div>
         </div>

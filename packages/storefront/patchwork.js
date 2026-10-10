@@ -1,5 +1,5 @@
 // ../contracts/dist/operations.js
-var ALLOWED_STYLE_PROPERTIES = new Set([
+var ALLOWED_STYLE_PROPERTIES = /* @__PURE__ */ new Set([
   "display",
   "visibility",
   "opacity",
@@ -41,7 +41,7 @@ var ALLOWED_STYLE_PROPERTIES = new Set([
   "justify-content",
   "gap"
 ]);
-var ALLOWED_ATTRIBUTES = new Set([
+var ALLOWED_ATTRIBUTES = /* @__PURE__ */ new Set([
   "title",
   "alt",
   "disabled",
@@ -125,7 +125,7 @@ function validatePatchOperation(op) {
       return { valid: true };
     }
     case "element.show": {
-      if (op.display !== undefined && typeof op.display !== "string") {
+      if (op.display !== void 0 && typeof op.display !== "string") {
         return { valid: false, error: "Display value must be a string." };
       }
       return { valid: true };
@@ -138,6 +138,7 @@ function validatePatchOperation(op) {
     }
   }
 }
+
 // src/mutation.ts
 function resolveTargetElement(fingerprint, doc = document) {
   try {
@@ -247,12 +248,15 @@ function revertPatchFromDom(applyResult, doc = document) {
   try {
     if (state.styleProperty) {
       if (state.styleProperty.value) {
-        element.style.setProperty(state.styleProperty.property, state.styleProperty.value);
+        element.style.setProperty(
+          state.styleProperty.property,
+          state.styleProperty.value
+        );
       } else {
         element.style.removeProperty(state.styleProperty.property);
       }
     }
-    if (state.textContent !== undefined) {
+    if (state.textContent !== void 0) {
       element.textContent = state.textContent;
     }
     if (state.attribute) {
@@ -262,14 +266,14 @@ function revertPatchFromDom(applyResult, doc = document) {
         element.removeAttribute(state.attribute.name);
       }
     }
-    if (state.display !== undefined) {
+    if (state.display !== void 0) {
       if (state.display) {
         element.style.display = state.display;
       } else {
         element.style.removeProperty("display");
       }
     }
-    if (state.ariaHidden !== undefined) {
+    if (state.ariaHidden !== void 0) {
       if (state.ariaHidden !== null) {
         element.setAttribute("aria-hidden", state.ariaHidden);
       } else {
@@ -288,8 +292,8 @@ function revertPatchFromDom(applyResult, doc = document) {
 var revertPatchOnDom = revertPatchFromDom;
 
 // src/inspector.ts
-var AMBIGUOUS_CONTAINER_TAGS = new Set(["HTML", "BODY", "MAIN", "SECTION", "HEADER", "FOOTER"]);
-var AMBIGUOUS_CLASSES = new Set(["storefront-app", "store-main", "catalog-grid", "container"]);
+var AMBIGUOUS_CONTAINER_TAGS = /* @__PURE__ */ new Set(["HTML", "BODY", "MAIN", "SECTION", "HEADER", "FOOTER"]);
+var AMBIGUOUS_CLASSES = /* @__PURE__ */ new Set(["storefront-app", "store-main", "catalog-grid", "container"]);
 function isAmbiguousContainer(element) {
   if (AMBIGUOUS_CONTAINER_TAGS.has(element.tagName.toUpperCase())) {
     return true;
@@ -320,43 +324,34 @@ function generateElementSelector(element) {
 }
 function extractTargetFingerprint(element) {
   const tag = element.tagName.toLowerCase();
-  const role = element.getAttribute("role") || (tag === "button" ? "button" : tag === "a" ? "link" : undefined);
-  const accessibleName = element.getAttribute("aria-label") || element.getAttribute("aria-labelledby") || element.getAttribute("title") || (element.textContent || "").trim().substring(0, 50) || undefined;
-  const text = (element.textContent || "").trim().substring(0, 80) || undefined;
-  const parentContext = element.parentElement?.id || element.parentElement?.className || undefined;
+  const role = element.getAttribute("role") || (tag === "button" ? "button" : tag === "a" ? "link" : void 0);
+  const accessibleName = element.getAttribute("aria-label") || element.getAttribute("aria-labelledby") || element.getAttribute("title") || (element.textContent || "").trim().substring(0, 50) || void 0;
+  const text = (element.textContent || "").trim().substring(0, 80) || void 0;
+  const parentContext = element.parentElement?.id || element.parentElement?.className || void 0;
   const selector = generateElementSelector(element);
-  let siblingContext = undefined;
+  let siblingContext = void 0;
   const prevSibling = element.previousElementSibling;
   const nextSibling = element.nextElementSibling;
   const siblingSnippets = [];
   if (prevSibling) {
     const prevText = (prevSibling.textContent || "").trim().substring(0, 40);
-    if (prevText)
-      siblingSnippets.push(prevText);
-    else if (prevSibling.id)
-      siblingSnippets.push(`#${prevSibling.id}`);
+    if (prevText) siblingSnippets.push(prevText);
+    else if (prevSibling.id) siblingSnippets.push(`#${prevSibling.id}`);
   }
   if (nextSibling) {
     const nextText = (nextSibling.textContent || "").trim().substring(0, 40);
-    if (nextText)
-      siblingSnippets.push(nextText);
-    else if (nextSibling.id)
-      siblingSnippets.push(`#${nextSibling.id}`);
+    if (nextText) siblingSnippets.push(nextText);
+    else if (nextSibling.id) siblingSnippets.push(`#${nextSibling.id}`);
   }
   if (siblingSnippets.length > 0) {
     siblingContext = siblingSnippets.join(" | ");
   }
   const stableAttributes = {};
-  if (element.getAttribute("name"))
-    stableAttributes["name"] = element.getAttribute("name");
-  if (element.getAttribute("type"))
-    stableAttributes["type"] = element.getAttribute("type");
-  if (element.getAttribute("data-testid"))
-    stableAttributes["data-testid"] = element.getAttribute("data-testid");
-  if (element.getAttribute("data-action"))
-    stableAttributes["data-action"] = element.getAttribute("data-action");
-  if (element.getAttribute("aria-label"))
-    stableAttributes["aria-label"] = element.getAttribute("aria-label");
+  if (element.getAttribute("name")) stableAttributes["name"] = element.getAttribute("name");
+  if (element.getAttribute("type")) stableAttributes["type"] = element.getAttribute("type");
+  if (element.getAttribute("data-testid")) stableAttributes["data-testid"] = element.getAttribute("data-testid");
+  if (element.getAttribute("data-action")) stableAttributes["data-action"] = element.getAttribute("data-action");
+  if (element.getAttribute("aria-label")) stableAttributes["aria-label"] = element.getAttribute("aria-label");
   return {
     tag,
     role,
@@ -365,7 +360,7 @@ function extractTargetFingerprint(element) {
     parentContext,
     siblingContext,
     selector,
-    stableAttributes: Object.keys(stableAttributes).length > 0 ? stableAttributes : undefined
+    stableAttributes: Object.keys(stableAttributes).length > 0 ? stableAttributes : void 0
   };
 }
 function initVisualInspector(options = {}) {
@@ -389,14 +384,11 @@ function initVisualInspector(options = {}) {
     }
   }
   function handleMouseMove(e) {
-    if (!isEnabled)
-      return;
+    if (!isEnabled) return;
     const target = e.target;
     if (!target || isAmbiguousContainer(target) || target.id?.startsWith("patchwork-")) {
-      if (activeHighlight)
-        activeHighlight.style.display = "none";
-      if (activeTooltip)
-        activeTooltip.style.display = "none";
+      if (activeHighlight) activeHighlight.style.display = "none";
+      if (activeTooltip) activeTooltip.style.display = "none";
       return;
     }
     const rect = target.getBoundingClientRect();
@@ -418,8 +410,7 @@ function initVisualInspector(options = {}) {
     }
   }
   function handleClick(e) {
-    if (!isEnabled)
-      return;
+    if (!isEnabled) return;
     const target = e.target;
     if (!target || isAmbiguousContainer(target) || target.id?.startsWith("patchwork-")) {
       return;
@@ -432,15 +423,18 @@ function initVisualInspector(options = {}) {
     }
     const targetWindow = win.opener || (win.parent !== win ? win.parent : null);
     if (targetWindow) {
-      targetWindow.postMessage({
-        type: "PATCHWORK_ELEMENT_SELECTED",
-        fingerprint
-      }, "*");
+      targetWindow.postMessage(
+        {
+          type: "PATCHWORK_ELEMENT_SELECTED",
+          fingerprint
+        },
+        "*"
+      );
     }
     toggleInspector(false);
   }
   function toggleInspector(enable) {
-    isEnabled = enable !== undefined ? enable : !isEnabled;
+    isEnabled = enable !== void 0 ? enable : !isEnabled;
     createOverlayElements();
     if (isEnabled) {
       doc.addEventListener("mousemove", handleMouseMove, true);
@@ -448,18 +442,40 @@ function initVisualInspector(options = {}) {
     } else {
       doc.removeEventListener("mousemove", handleMouseMove, true);
       doc.removeEventListener("click", handleClick, true);
-      if (activeHighlight)
-        activeHighlight.style.display = "none";
-      if (activeTooltip)
-        activeTooltip.style.display = "none";
+      if (activeHighlight) activeHighlight.style.display = "none";
+      if (activeTooltip) activeTooltip.style.display = "none";
     }
     return isEnabled;
   }
   win.addEventListener("message", (msg) => {
-    if (msg.data && msg.data.type === "PATCHWORK_TOGGLE_INSPECTOR") {
+    if (!msg.data) return;
+    if (msg.data.type === "PATCHWORK_TOGGLE_INSPECTOR") {
       toggleInspector(Boolean(msg.data.enabled));
+    } else if (msg.data.type === "PATCHWORK_PING_INSPECTOR") {
+      const targetWindow = win.opener || (win.parent !== win ? win.parent : null);
+      if (targetWindow) {
+        targetWindow.postMessage({ type: "PATCHWORK_INSPECTOR_READY", isEnabled }, "*");
+      }
+    } else if (msg.data.type === "PATCHWORK_LIVE_PREVIEW") {
+      const { patch } = msg.data;
+      if (patch && patch.operation) {
+        applyPatchToDom(patch, doc);
+      }
+    } else if (msg.data.type === "PATCHWORK_REVERT_PREVIEW") {
+      const { patch } = msg.data;
+      if (patch && patch.operation) {
+        revertPatchOnDom(patch, doc);
+      }
     }
   });
+  const notifyReady = () => {
+    const targetWindow = win.opener || (win.parent !== win ? win.parent : null);
+    if (targetWindow) {
+      targetWindow.postMessage({ type: "PATCHWORK_INSPECTOR_READY", isEnabled }, "*");
+    }
+  };
+  notifyReady();
+  win.setTimeout(notifyReady, 500);
   return { toggleInspector };
 }
 
@@ -500,7 +516,7 @@ function calculateDetailedFingerprintSimilarity(element, fingerprint) {
     breakdown.text = 0.15;
   }
   let roleScore = 0;
-  const elRole = element.getAttribute("role") || (elTag === "button" ? "button" : elTag === "a" ? "link" : undefined);
+  const elRole = element.getAttribute("role") || (elTag === "button" ? "button" : elTag === "a" ? "link" : void 0);
   if (fingerprint.role && elRole) {
     if (elRole.toLowerCase() === fingerprint.role.toLowerCase()) {
       roleScore = 0.1;
@@ -540,7 +556,10 @@ function calculateDetailedFingerprintSimilarity(element, fingerprint) {
         }
       }
     }
-    breakdown.stableAttributes = Math.min(0.15, Math.round(matchedCount / keys.length * 0.15 * 100) / 100);
+    breakdown.stableAttributes = Math.min(
+      0.15,
+      Math.round(matchedCount / keys.length * 0.15 * 100) / 100
+    );
   } else {
     breakdown.stableAttributes = 0.1;
   }
@@ -578,10 +597,10 @@ function calculateFingerprintSimilarity(element, fingerprint) {
   return calculateDetailedFingerprintSimilarity(element, fingerprint).score;
 }
 function rankDriftCandidates(fingerprint, doc = document) {
-  const elementsSet = new Set;
+  const elementsSet = /* @__PURE__ */ new Set();
   if (fingerprint.tag) {
     const byTag = doc.getElementsByTagName(fingerprint.tag);
-    for (let i = 0;i < byTag.length; i++) {
+    for (let i = 0; i < byTag.length; i++) {
       elementsSet.add(byTag[i]);
     }
   }
@@ -595,7 +614,9 @@ function rankDriftCandidates(fingerprint, doc = document) {
   }
   if (fingerprint.parentContext) {
     try {
-      const containers = doc.querySelectorAll(`#${fingerprint.parentContext}, .${fingerprint.parentContext}`);
+      const containers = doc.querySelectorAll(
+        `#${fingerprint.parentContext}, .${fingerprint.parentContext}`
+      );
       containers.forEach((container) => {
         const interactive = container.querySelectorAll("button, a, input, [role='button']");
         interactive.forEach((el) => elementsSet.add(el));
@@ -661,7 +682,10 @@ async function detectDomDriftAndHandleStale(patch, doc = document, apiBase = "ht
   }
   const ranked = rankDriftCandidates(patch.targetFingerprint, doc);
   const bestCandidate = ranked[0] || null;
-  console.warn(`[PATCHWORK Drift] Selector '${patch.targetFingerprint.selector}' failed for patch '${patch.id}'.`, bestCandidate ? `Identified candidate <${bestCandidate.element.tagName.toLowerCase()} id="${bestCandidate.element.id}"> with score ${bestCandidate.score.toFixed(2)} [tier: ${bestCandidate.tier}].` : "No viable candidate found.");
+  console.warn(
+    `[PATCHWORK Drift] Selector '${patch.targetFingerprint.selector}' failed for patch '${patch.id}'.`,
+    bestCandidate ? `Identified candidate <${bestCandidate.element.tagName.toLowerCase()} id="${bestCandidate.element.id}"> with score ${bestCandidate.score.toFixed(2)} [tier: ${bestCandidate.tier}].` : "No viable candidate found."
+  );
   try {
     await fetchFn(`${apiBase}/patches/${patch.id}/transition`, {
       method: "POST",
@@ -681,7 +705,7 @@ async function detectDomDriftAndHandleStale(patch, doc = document, apiBase = "ht
     candidateSelector: bestCandidate?.selector,
     score: bestCandidate?.score,
     tier: bestCandidate?.tier,
-    candidate: bestCandidate || undefined,
+    candidate: bestCandidate || void 0,
     breakdown: bestCandidate?.breakdown
   };
 }
@@ -705,15 +729,14 @@ async function initPatchworkRuntime(options = {}) {
       }
       const draftPatch = await res.json();
       let applyResult = applyPatchToDom(draftPatch, doc);
-      let driftResult = undefined;
+      let driftResult = void 0;
       if (applyResult.status === "stale") {
         driftResult = await detectDomDriftAndHandleStale(draftPatch, doc, apiBase);
         renderDriftWatermark(doc, draftPatch, driftResult);
       }
       let isPatched = applyResult.status === "applied";
       const resetToBaseline = () => {
-        if (!isPatched)
-          return;
+        if (!isPatched) return void 0;
         const rev = revertPatchOnDom(applyResult, doc);
         if (rev.reverted) {
           isPatched = false;
@@ -721,8 +744,7 @@ async function initPatchworkRuntime(options = {}) {
         return rev;
       };
       const reapplyPreview = () => {
-        if (isPatched)
-          return applyResult;
+        if (isPatched) return applyResult;
         applyResult = applyPatchToDom(draftPatch, doc);
         if (applyResult.status === "applied") {
           isPatched = true;
@@ -782,23 +804,34 @@ async function initPatchworkRuntime(options = {}) {
     const release = data.release;
     const patches = data.patches || [];
     const results = [];
-    let primaryDriftResult = undefined;
+    let primaryDriftResult = void 0;
     for (const patch of patches) {
       const r = applyPatchToDom(patch, doc);
       results.push(r);
       if (r.status === "stale") {
         const drift = await detectDomDriftAndHandleStale(patch, doc, apiBase);
-        if (!primaryDriftResult)
-          primaryDriftResult = drift;
+        if (!primaryDriftResult) primaryDriftResult = drift;
         renderDriftWatermark(doc, patch, drift);
       }
+    }
+    const resetToBaseline = () => {
+      return results.map((r) => revertPatchOnDom(r, doc));
+    };
+    if (typeof win !== "undefined") {
+      win.__PATCHWORK_RELEASE__ = {
+        release,
+        patches,
+        results,
+        resetToBaseline
+      };
     }
     return {
       mode: "production",
       websiteId,
       releaseId: release?.id,
       results,
-      drift: primaryDriftResult
+      drift: primaryDriftResult,
+      resetToBaseline
     };
   } catch (err) {
     console.error("[PATCHWORK Runtime] Error loading active release:", err);
@@ -806,20 +839,24 @@ async function initPatchworkRuntime(options = {}) {
   }
 }
 function renderPreviewWatermark(doc) {
-  if (doc.getElementById("patchwork-preview-badge"))
-    return;
+  if (doc.getElementById("patchwork-preview-badge")) return;
   const badge = doc.createElement("div");
   badge.id = "patchwork-preview-badge";
-  badge.setAttribute("style", "position: fixed; top: 12px; right: 12px; z-index: 999999; background: rgba(99, 102, 241, 0.9); backdrop-filter: blur(8px); color: #ffffff; padding: 6px 14px; border-radius: 9999px; font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.25); display: flex; align-items: center; gap: 6px;");
+  badge.setAttribute(
+    "style",
+    "position: fixed; top: 12px; right: 12px; z-index: 999999; background: rgba(99, 102, 241, 0.9); backdrop-filter: blur(8px); color: #ffffff; padding: 6px 14px; border-radius: 9999px; font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.25); display: flex; align-items: center; gap: 6px;"
+  );
   badge.innerHTML = `<span style="width: 8px; height: 8px; background: #22d3ee; border-radius: 50%;"></span> PATCHWORK PREVIEW MODE`;
   doc.body?.appendChild(badge);
 }
 function renderDriftWatermark(doc, patch, drift) {
-  if (doc.getElementById("patchwork-drift-watermark"))
-    return;
+  if (doc.getElementById("patchwork-drift-watermark")) return;
   const banner = doc.createElement("div");
   banner.id = "patchwork-drift-watermark";
-  banner.setAttribute("style", "position: fixed; top: 56px; right: 12px; z-index: 999997; background: rgba(30, 27, 75, 0.95); backdrop-filter: blur(12px); color: #f8fafc; border: 1px solid rgba(245, 158, 11, 0.6); box-shadow: 0 10px 25px rgba(0,0,0,0.5); border-radius: 10px; padding: 12px 16px; font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 12px; max-width: 380px;");
+  banner.setAttribute(
+    "style",
+    "position: fixed; top: 56px; right: 12px; z-index: 999997; background: rgba(30, 27, 75, 0.95); backdrop-filter: blur(12px); color: #f8fafc; border: 1px solid rgba(245, 158, 11, 0.6); box-shadow: 0 10px 25px rgba(0,0,0,0.5); border-radius: 10px; padding: 12px 16px; font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 12px; max-width: 380px;"
+  );
   const tierColor = drift.tier === "high" ? "#22c55e" : drift.tier === "review_required" ? "#f59e0b" : "#ef4444";
   const tierLabel = drift.tier === "high" ? "High Confidence Match" : drift.tier === "review_required" ? "Review Required" : "Stale / Ambiguous";
   const candidateHtml = drift.candidate ? `
@@ -827,7 +864,7 @@ function renderDriftWatermark(doc, patch, drift) {
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
           <span style="color: #94a3b8; font-size: 11px;">Candidate: <strong style="color: #ffffff; font-family: monospace;">${drift.candidate.selector}</strong></span>
           <span style="background: ${tierColor}22; color: ${tierColor}; border: 1px solid ${tierColor}55; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700;">
-            ${((drift.score || 0) * 100).toFixed(0)}% • ${tierLabel}
+            ${((drift.score || 0) * 100).toFixed(0)}% \u2022 ${tierLabel}
           </span>
         </div>
         <div style="color: #cbd5e1; font-size: 11px;">
@@ -855,11 +892,13 @@ function renderDriftWatermark(doc, patch, drift) {
 }
 function renderPreviewBar(doc, patch, handlers) {
   renderPreviewWatermark(doc);
-  if (doc.getElementById("patchwork-preview-bar"))
-    return;
+  if (doc.getElementById("patchwork-preview-bar")) return;
   const bar = doc.createElement("div");
   bar.id = "patchwork-preview-bar";
-  bar.setAttribute("style", "position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 999998; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(99, 102, 241, 0.4); border-radius: 12px; padding: 10px 18px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6); display: flex; align-items: center; gap: 16px; font-family: -apple-system, BlinkMacSystemFont, sans-serif; color: #f8fafc; font-size: 13px; max-width: 90vw;");
+  bar.setAttribute(
+    "style",
+    "position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 999998; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(99, 102, 241, 0.4); border-radius: 12px; padding: 10px 18px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6); display: flex; align-items: center; gap: 16px; font-family: -apple-system, BlinkMacSystemFont, sans-serif; color: #f8fafc; font-size: 13px; max-width: 90vw;"
+  );
   const opSummary = patch.operation.type === "style.set" ? `${patch.operation.type} (${patch.operation.property}: ${patch.operation.value})` : patch.operation.type;
   const initialPillText = handlers.isStale ? "Stale (Drift Detected)" : "Preview Active";
   const initialPillColor = handlers.isStale ? "#fbbf24" : "#4ade80";
@@ -921,19 +960,19 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
   }
 }
 export {
-  revertPatchOnDom,
-  revertPatchFromDom,
-  resolveTargetElement,
-  renderDriftWatermark,
-  rankDriftCandidates,
-  isAmbiguousContainer,
-  initVisualInspector,
-  initPatchworkRuntime,
-  generateElementSelector,
-  findDriftCandidate,
-  extractTargetFingerprint,
-  detectDomDriftAndHandleStale,
-  calculateFingerprintSimilarity,
+  applyPatchToDom,
   calculateDetailedFingerprintSimilarity,
-  applyPatchToDom
+  calculateFingerprintSimilarity,
+  detectDomDriftAndHandleStale,
+  extractTargetFingerprint,
+  findDriftCandidate,
+  generateElementSelector,
+  initPatchworkRuntime,
+  initVisualInspector,
+  isAmbiguousContainer,
+  rankDriftCandidates,
+  renderDriftWatermark,
+  resolveTargetElement,
+  revertPatchFromDom,
+  revertPatchOnDom
 };

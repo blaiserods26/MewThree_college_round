@@ -197,7 +197,8 @@ export type AuditAction =
   | "verification.passed"
   | "verification.failed"
   | "release.published"
-  | "release.rolled_back";
+  | "release.rolled_back"
+  | "health.checked";
 
 export interface AuditActor {
   id: string;
@@ -208,7 +209,7 @@ export interface AuditActor {
 export interface AuditEvent {
   id: string;
   websiteId: string;
-  entityType: "patch" | "release" | "verification";
+  entityType: "patch" | "release" | "verification" | "health_check";
   entityId: string;
   action: AuditAction;
   actor: AuditActor;
@@ -220,4 +221,49 @@ export interface AuditEvent {
     reason?: string;
     metadata?: Record<string, unknown>;
   };
+}
+
+export type BlastRadiusRisk = "low" | "medium" | "high";
+
+export interface BlastRadiusAssessment {
+  impactType: "cosmetic_style" | "content_text" | "dom_attribute" | "visibility";
+  targetScope: "single_element";
+  riskLevel: BlastRadiusRisk;
+  riskReasons: string[];
+  isUniqueTarget: boolean;
+  hasCollisions: boolean;
+  verificationPassed: boolean;
+}
+
+export interface PatchEvidenceRecord {
+  patchId: string;
+  patchVersion: number;
+  websiteId: string;
+  targetFingerprint: TargetFingerprint;
+  operation: PatchOperation;
+  status: PatchStatus;
+  readinessDecision: "ready_to_publish" | "needs_verification" | "verification_failed" | "blocked_by_conflict" | "target_stale";
+  readinessReasons: string[];
+  blastRadius: BlastRadiusAssessment;
+  latestVerification?: VerificationRun;
+  verificationRunsCount: number;
+  conflicts: any;
+  updatedAt: string;
+}
+
+export interface ReleaseHealthCheckResult {
+  status: "healthy" | "degraded" | "target_missing" | "unapplied" | "baseline";
+  websiteId: string;
+  releaseId?: string;
+  checkedAt: string;
+  patchesChecked: number;
+  results: Array<{
+    patchId: string;
+    patchName: string;
+    targetSelector: string;
+    status: "healthy" | "drifted" | "failed";
+    details?: string;
+    runId?: string;
+  }>;
+  recommendation?: string;
 }
