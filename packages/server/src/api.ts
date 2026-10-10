@@ -63,6 +63,13 @@ export function createServer(service: PatchService): http.Server {
         return sendJson(res, 200, site);
       }
 
+      // Website Conflicts endpoint
+      const websiteConflictsMatch = pathname.match(/^\/api\/websites\/([^/]+)\/conflicts$/);
+      if (websiteConflictsMatch && method === "GET") {
+        const websiteId = websiteConflictsMatch[1];
+        return sendJson(res, 200, service.getWebsiteConflicts(websiteId));
+      }
+
       // Active Release endpoint for runtime injection
       const activeRelMatch = pathname.match(/^\/api\/websites\/([^/]+)\/active-release$/);
       if (activeRelMatch && method === "GET") {
@@ -128,6 +135,25 @@ export function createServer(service: PatchService): http.Server {
         return sendJson(res, 201, patch);
       }
 
+      // Check Conflicts endpoint
+      if (pathname === "/api/patches/check-conflicts" && method === "POST") {
+        const body = await parseJsonBody(req);
+        if (body.patchIds && Array.isArray(body.patchIds)) {
+          const patches = body.patchIds
+            .map((id: string) => service.getPatch(id))
+            .filter((p: any) => p !== undefined);
+          return sendJson(res, 200, service.detectPatchConflicts(patches));
+        }
+        if (body.patchId) {
+          return sendJson(
+            res,
+            200,
+            service.checkPatchConflicts(body.patchId, body.candidatePatchIds)
+          );
+        }
+        return sendJson(res, 400, { error: "Either patchIds array or patchId string is required." });
+      }
+
       // Patch Detail
       const patchDetailMatch = pathname.match(/^\/api\/patches\/([^/]+)$/);
       if (patchDetailMatch && method === "GET") {
@@ -178,6 +204,26 @@ export function createServer(service: PatchService): http.Server {
           actor: body.actor || { id: "anonymous", name: "Anonymous", role: "developer" },
         });
         return sendJson(res, 200, rebound);
+      }
+
+      // Resolve Conflict
+      const resolveConflictMatch = pathname.match(/^\/api\/patches\/([^/]+)\/resolve-conflict$/);
+      if (resolveConflictMatch && method === "POST") {
+        const patchId = resolveConflictMatch[1];
+        const body = await parseJsonBody(req);
+        if (!body.strategy) {
+          return sendJson(res, 400, {
+            error: "strategy is required ('keep_this', 'revise_value', 'discard').",
+          });
+        }
+        const result = service.resolvePatchConflict(patchId, {
+          strategy: body.strategy,
+          supersededPatchId: body.supersededPatchId,
+          revisedOperation: body.revisedOperation,
+          reason: body.reason,
+          actor: body.actor || { id: "anonymous", name: "Anonymous", role: "developer" },
+        });
+        return sendJson(res, 200, result);
       }
 
       // Execute Automated Verification for Patch

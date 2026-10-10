@@ -101,6 +101,16 @@
       <!-- VIEW 2: RELEASES & ROLLBACK -->
       <section id="view-releases" class="view-panel">
         <div class="releases-container">
+          <div class="releases-toolbar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: rgba(30, 41, 59, 0.4); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 16px 20px;">
+            <div>
+              <h2 style="font-size: 1.25rem; font-weight: 700; color: #f8fafc; margin-bottom: 4px;">Release Management & Safe Deployments</h2>
+              <p style="font-size: 0.85rem; color: var(--text-faint); margin: 0;">Bundle verified patches into immutable, versioned production releases with instant 1-click rollback.</p>
+            </div>
+            <button id="open-release-modal-btn" class="btn btn-primary" type="button" style="display: flex; align-items: center; gap: 8px;">
+              🚀 + Create Release Bundle
+            </button>
+          </div>
+
           <div class="active-release-banner" id="active-release-card">
             <div class="active-release-info">
               <div class="banner-tag">ACTIVE PRODUCTION DEPLOYMENT</div>
@@ -189,6 +199,40 @@
           <div class="modal-footer">
             <button id="cancel-new-patch-btn" class="btn btn-secondary" type="button">Cancel</button>
             <button id="submit-new-patch-btn" class="btn btn-primary" type="submit">Create Draft Patch</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Create Multi-Patch Release Modal -->
+    <div id="release-bundle-modal" class="modal-backdrop hidden">
+      <div class="modal-dialog" style="max-width: 680px;">
+        <div class="modal-header">
+          <h3 class="modal-title">Deploy Multi-Patch Release</h3>
+          <button id="close-release-modal-btn" class="modal-close" type="button">×</button>
+        </div>
+        <form id="release-bundle-form" class="modal-form">
+          <div class="form-group">
+            <label for="release-summary-input">Change Summary / Release Notes</label>
+            <input id="release-summary-input" type="text" placeholder="e.g. Winter Sale Launch: Headline, Emerald CTA & Promo Badge" />
+          </div>
+
+          <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <label style="margin: 0; font-weight: 600;">Select Verified Patches for Bundle</label>
+              <span id="selected-patches-count" style="font-size: 0.8rem; color: #38bdf8; font-weight: 600;">0 Selected</span>
+            </div>
+            <div id="release-modal-checklist" class="modal-checklist">
+              <!-- Checklist injected dynamically -->
+            </div>
+            <div id="bundle-gate-warning" class="gate-notice blocked hidden" style="margin-top: 10px;"></div>
+          </div>
+
+          <div class="modal-footer">
+            <button id="cancel-release-modal-btn" class="btn btn-secondary" type="button">Cancel</button>
+            <button id="submit-release-bundle-btn" class="btn btn-primary" type="submit" disabled>
+              🚀 Publish Release Bundle
+            </button>
           </div>
         </form>
       </div>

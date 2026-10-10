@@ -384,37 +384,37 @@ These thresholds are heuristics, not proof of semantic correctness.
 
 ### Step 6.1 — Implement deterministic conflict detection
 
-- [ ] Compare target fingerprints across active and proposed patches.
-- [ ] Detect two patches that modify the same property on the same target.
-- [ ] Detect overlapping operations that may be incompatible.
-- [ ] Allow non-overlapping patches to coexist.
-- [ ] Display the conflicting patches and their proposed values.
-- [ ] Allow a developer to choose one value, revise a patch, or discard a patch.
-- [ ] Record the resolution in the audit trail.
-- [ ] Re-run verification after a conflict is resolved.
+- [x] Compare target fingerprints across active and proposed patches.
+- [x] Detect two patches that modify the same property on the same target.
+- [x] Detect overlapping operations that may be incompatible.
+- [x] Allow non-overlapping patches to coexist.
+- [x] Display the conflicting patches and their proposed values.
+- [x] Allow a developer to choose one value, revise a patch, or discard a patch.
+- [x] Record the resolution in the audit trail.
+- [x] Re-run verification after a conflict is resolved.
 
 Example conflict: one patch sets the checkout button background to green while another sets it to red.
 
 ### Step 6.2 — Implement release versioning
 
-- [ ] Group verified patches into a release or active patch set.
-- [ ] Give each release a unique ID/version.
-- [ ] Store which patch versions are included in the release.
-- [ ] Store who published the release and when.
-- [ ] Record the verification run associated with the release.
-- [ ] Keep prior release records immutable.
-- [ ] Display active release and previous releases.
+- [x] Group verified patches into a release or active patch set.
+- [x] Give each release a unique ID/version.
+- [x] Store which patch versions are included in the release.
+- [x] Store who published the release and when.
+- [x] Record the verification run associated with the release.
+- [x] Keep prior release records immutable.
+- [x] Display active release and previous releases.
 
 ### Step 6.3 — Implement safe publish and rollback
 
-- [ ] Reject releases that contain failed or unresolved patches.
-- [ ] Prepare the new patch set before activating it.
-- [ ] Switch the active release only after the release is approved.
-- [ ] Preserve the last known-good release.
-- [ ] Implement rollback to the previous active patch set.
-- [ ] Verify the page after rollback.
-- [ ] Record rollback reason, actor, timestamp, and target release.
-- [ ] Demonstrate a failed release being blocked or rolled back.
+- [x] Reject releases that contain failed or unresolved patches.
+- [x] Prepare the new patch set before activating it.
+- [x] Switch the active release only after the release is approved.
+- [x] Preserve the last known-good release.
+- [x] Implement rollback to the previous active patch set.
+- [x] Verify the page after rollback.
+- [x] Record rollback reason, actor, timestamp, and target release.
+- [x] Demonstrate a failed release being blocked or rolled back.
 
 For the prototype, atomic activation can be represented by switching an active release pointer. Ensure the runtime actually respects that pointer; changing only the dashboard label is not a real rollback.
 
@@ -422,26 +422,26 @@ For the prototype, atomic activation can be represented by switching an active r
 
 Record events such as:
 
-- [ ] Patch created.
-- [ ] Patch edited/versioned.
-- [ ] Verification started/completed/failed.
-- [ ] Patch marked stale.
-- [ ] Conflict detected/resolved.
-- [ ] Release published.
-- [ ] Release rolled back.
-- [ ] Target rebound after review.
+- [x] Patch created.
+- [x] Patch edited/versioned.
+- [x] Verification started/completed/failed.
+- [x] Patch marked stale.
+- [x] Conflict detected/resolved.
+- [x] Release published.
+- [x] Release rolled back.
+- [x] Target rebound after review.
 
-- [ ] Display events in chronological order.
-- [ ] Include actor, timestamp, event type, and relevant patch/release ID.
-- [ ] Make the audit log reflect real operations rather than demo-only entries.
+- [x] Display events in chronological order.
+- [x] Include actor, timestamp, event type, and relevant patch/release ID.
+- [x] Make the audit log reflect real operations rather than demo-only entries.
 
 **Phase exit check**
 
-- [ ] Overlapping patches are detected.
-- [ ] Conflict resolution is recorded.
-- [ ] A verified release can be published.
-- [ ] Rollback restores the previous active patch set.
-- [ ] The audit trail reflects the actual lifecycle.
+- [x] Overlapping patches are detected.
+- [x] Conflict resolution is recorded.
+- [x] A verified release can be published.
+- [x] Rollback restores the previous active patch set.
+- [x] The audit trail reflects the actual lifecycle.
 
 ---
 

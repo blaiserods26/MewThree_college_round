@@ -12,6 +12,10 @@ import {
   canPublishPatch,
   computeRollback,
   createAuditEvent,
+  detectAllPatchConflicts,
+  detectConflictsBetweenPatches,
+  type ConflictDetectionResult,
+  type PatchConflict,
   validatePatchOperation,
   validatePatchTransition,
 } from "@patchwork/contracts";
@@ -44,6 +48,16 @@ export interface RebindPatchServiceInput {
   selector: string;
   targetFingerprint?: Partial<TargetFingerprint>;
   changeNote?: string;
+  actor: AuditActor;
+}
+
+export type ConflictResolutionStrategy = "keep_this" | "revise_value" | "discard";
+
+export interface ResolveConflictInput {
+  strategy: ConflictResolutionStrategy;
+  supersededPatchId?: string;
+  revisedOperation?: PatchOperation;
+  reason?: string;
   actor: AuditActor;
 }
 
@@ -304,6 +318,15 @@ export class PatchService {
       return p;
     });
 
+    // Release Gate: Strict multi-patch conflict check across release bundle
+    const conflictResult = detectAllPatchConflicts(patches);
+    if (conflictResult.hasConflicts) {
+      const first = conflictResult.conflicts[0];
+      throw new Error(
+        `Cannot create release: Conflicting patches detected between '${first.patchAId}' and '${first.patchBId}'. ${first.reason}`
+      );
+    }
+
     const now = new Date().toISOString();
     const existingReleases = this.store
       .getReleases()
@@ -532,5 +555,150 @@ export class PatchService {
 
   public getVerificationRun(runId: string): VerificationRun | undefined {
     return this.store.getVerificationRun(runId);
+  }
+
+  public detectPatchConflicts(patches: Patch[]): ConflictDetectionResult {
+    return detectAllPatchConflicts(patches);
+  }
+
+  public getWebsiteConflicts(websiteId: string): ConflictDetectionResult {
+    const patches = this.store
+      .getPatches(websiteId)
+      .filter((p) => p.status !== "archived" && p.status !== "rolled_back");
+    return detectAllPatchConflicts(patches);
+  }
+
+  public checkPatchConflicts(
+    patchId: string,
+    candidatePatchIds?: string[]
+  ): { patchId: string; conflicts: PatchConflict[] } {
+    const patch = this.store.getPatch(patchId);
+    if (!patch) {
+      throw new Error(`Patch '${patchId}' not found.`);
+    }
+
+    let candidates: Patch[];
+    if (candidatePatchIds && candidatePatchIds.length > 0) {
+      candidates = candidatePatchIds
+        .map((id) => this.store.getPatch(id))
+        .filter((p): p is Patch => p !== undefined && p.id !== patchId);
+    } else {
+      candidates = this.store
+        .getPatches(patch.websiteId)
+        .filter((p) => p.id !== patchId && p.status !== "archived" && p.status !== "rolled_back");
+    }
+
+    const conflicts: PatchConflict[] = [];
+    for (const other of candidates) {
+      const conflict = detectConflictsBetweenPatches(patch, other);
+      if (conflict) {
+        conflicts.push(conflict);
+      }
+    }
+
+    return { patchId, conflicts };
+  }
+
+  public resolvePatchConflict(
+    patchId: string,
+    input: ResolveConflictInput
+  ): { patch?: Patch; supersededPatch?: Patch } {
+    const patch = this.store.getPatch(patchId);
+    if (!patch) {
+      throw new Error(`Patch '${patchId}' not found.`);
+    }
+
+    const now = new Date().toISOString();
+    let updatedPatch: Patch = patch;
+    let supersededPatch: Patch | undefined;
+
+    if (input.supersededPatchId) {
+      const other = this.store.getPatch(input.supersededPatchId);
+      if (other) {
+        supersededPatch = {
+          ...other,
+          status: "archived",
+          updatedAt: now,
+        };
+        this.store.savePatch(supersededPatch);
+      }
+    }
+
+    if (input.strategy === "discard") {
+      updatedPatch = {
+        ...patch,
+        status: "archived",
+        updatedAt: now,
+      };
+      this.store.savePatch(updatedPatch);
+
+      // If competing patch was marked as conflict, return it to previewing
+      if (supersededPatch && supersededPatch.status === "conflict") {
+        supersededPatch.status = "previewing";
+        supersededPatch.updatedAt = now;
+        this.store.savePatch(supersededPatch);
+      }
+    } else if (input.strategy === "revise_value") {
+      if (!input.revisedOperation) {
+        throw new Error("revisedOperation is required when strategy is 'revise_value'.");
+      }
+      const validation = validatePatchOperation(input.revisedOperation);
+      if (!validation.valid) {
+        throw new Error(`Invalid revised operation: ${validation.error}`);
+      }
+
+      const nextVersionNum = patch.currentVersion + 1;
+      const note =
+        input.reason ||
+        `Conflict resolved via inline value revision to ${JSON.stringify(input.revisedOperation)}`;
+
+      const newVersion: PatchVersion = {
+        version: nextVersionNum,
+        targetFingerprint: patch.targetFingerprint,
+        operation: input.revisedOperation,
+        createdAt: now,
+        createdBy: input.actor.id,
+        changeNote: note,
+      };
+
+      updatedPatch = {
+        ...patch,
+        operation: input.revisedOperation,
+        currentVersion: nextVersionNum,
+        versions: [...patch.versions, newVersion],
+        status: "previewing",
+        updatedAt: now,
+      };
+      this.store.savePatch(updatedPatch);
+    } else if (input.strategy === "keep_this") {
+      updatedPatch = {
+        ...patch,
+        status: "previewing",
+        updatedAt: now,
+      };
+      this.store.savePatch(updatedPatch);
+    }
+
+    const auditEvent = createAuditEvent({
+      websiteId: patch.websiteId,
+      entityType: "patch",
+      entityId: patch.id,
+      action: "patch.updated",
+      actor: input.actor,
+      timestamp: now,
+      details: {
+        fromStatus: patch.status,
+        toStatus: updatedPatch.status,
+        reason: input.reason || `Conflict resolved using strategy '${input.strategy}'`,
+        metadata: {
+          actionType: "conflict_resolution",
+          strategy: input.strategy,
+          supersededPatchId: input.supersededPatchId,
+        },
+      },
+    });
+    this.store.addAuditEvent(auditEvent);
+
+    return { patch: updatedPatch, supersededPatch };
   }
 }

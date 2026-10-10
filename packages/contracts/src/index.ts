@@ -3,3 +3,4 @@ export * from "./lifecycle.js";
 export * from "./operations.js";
 export * from "./audit.js";
 export * from "./rollback.js";
+export * from "./conflicts.js";

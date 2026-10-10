@@ -23,7 +23,7 @@ export interface RuntimeResult {
   patchId?: string;
   results: ApplyPatchResult[];
   drift?: DriftDetectionResult;
-  resetToBaseline?: () => RevertPatchResult | undefined;
+  resetToBaseline?: () => RevertPatchResult | RevertPatchResult[] | undefined;
   reapplyPreview?: () => ApplyPatchResult | undefined;
 }
 
@@ -154,12 +154,26 @@ export async function initPatchworkRuntime(
       }
     }
 
+    const resetToBaseline = () => {
+      return results.map((r) => revertPatchOnDom(r, doc));
+    };
+
+    if (typeof win !== "undefined") {
+      (win as any).__PATCHWORK_RELEASE__ = {
+        release,
+        patches,
+        results,
+        resetToBaseline,
+      };
+    }
+
     return {
       mode: "production",
       websiteId,
       releaseId: release?.id,
       results,
       drift: primaryDriftResult,
+      resetToBaseline,
     };
   } catch (err) {
     console.error("[PATCHWORK Runtime] Error loading active release:", err);

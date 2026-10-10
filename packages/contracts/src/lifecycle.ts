@@ -6,13 +6,13 @@ export interface TransitionValidationResult {
 }
 
 const LEGAL_PATCH_TRANSITIONS: Record<PatchStatus, readonly PatchStatus[]> = {
-  draft: ["previewing", "archived"],
-  previewing: ["verified", "verification_failed", "stale", "draft", "archived"],
-  verified: ["published", "stale", "draft", "previewing", "archived"],
-  verification_failed: ["draft", "previewing", "archived"],
+  draft: ["previewing", "archived", "conflict"],
+  previewing: ["verified", "verification_failed", "stale", "draft", "archived", "conflict"],
+  verified: ["published", "stale", "draft", "previewing", "archived", "conflict"],
+  verification_failed: ["draft", "previewing", "archived", "conflict"],
   published: ["stale", "rolled_back", "archived"],
-  stale: ["previewing", "draft", "archived"],
-  conflict: ["draft", "archived"],
+  stale: ["previewing", "draft", "archived", "conflict"],
+  conflict: ["draft", "previewing", "archived"],
   rolled_back: ["draft", "archived"],
   archived: [],
 };

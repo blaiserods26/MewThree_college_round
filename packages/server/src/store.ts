@@ -77,8 +77,12 @@ export class JsonFileStore {
     this.save();
   }
 
-  public getPatches(): Patch[] {
-    return Object.values(this.data.patches);
+  public getPatches(websiteId?: string): Patch[] {
+    const patches = Object.values(this.data.patches);
+    if (websiteId) {
+      return patches.filter((p) => p.websiteId === websiteId);
+    }
+    return patches;
   }
 
   public getPatch(id: string): Patch | undefined {

@@ -180,6 +180,23 @@
     }
     const latestRun = runs[0];
 
+    let activeConflict = null;
+    try {
+      const conflictRes = await fetch(`${API_BASE}/patches/check-conflicts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ patchId: patch.id }),
+      });
+      if (conflictRes.ok) {
+        const conflictData = await conflictRes.json();
+        if (conflictData.conflicts && conflictData.conflicts.length > 0) {
+          activeConflict = conflictData.conflicts[0];
+        }
+      }
+    } catch (e) {
+      console.warn("Could not check conflicts", e);
+    }
+
     patchDetailContainer.innerHTML = `
       <div class="detail-header-card">
         <div>
@@ -188,9 +205,84 @@
           <span style="font-size: 0.8rem; color: var(--text-faint);">ID: ${patch.id} • Target: ${patch.websiteId}</span>
         </div>
         <div class="detail-actions-bar">
-          ${renderLifecycleActionButtons(patch)}
+          ${renderLifecycleActionButtons(patch, activeConflict)}
         </div>
       </div>
+
+      ${
+        activeConflict
+          ? `
+      <!-- Conflict Detected & Interactive Resolution Panel -->
+      <div class="conflict-card" id="conflict-resolution-card">
+        <div class="conflict-header">
+          <div class="conflict-title">
+            <span>⚠️ Multi-Patch Collision Warning: Overlapping Mutation Detected</span>
+          </div>
+          <span class="conflict-badge">
+            ⚡ Error • Release Blocked
+          </span>
+        </div>
+
+        <div style="font-size: 0.88rem; color: #fecaca; line-height: 1.5; margin-bottom: 12px;">
+          ${activeConflict.reason}
+        </div>
+
+        <table class="conflict-table">
+          <thead>
+            <tr>
+              <th>Property</th>
+              <th>This Patch (${patch.id})</th>
+              <th>Competing Patch (${activeConflict.patchBId})</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="font-weight: 600; color: #94a3b8;">Target Selector</td>
+              <td><code>${activeConflict.targetSelector}</code></td>
+              <td><code>${activeConflict.targetSelector}</code></td>
+              <td><span style="color: #ef4444; font-weight: 700;">Overlap</span></td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600; color: #94a3b8;">Operation / Property</td>
+              <td>${activeConflict.collidingProperty || patch.operation.type}</td>
+              <td>${activeConflict.collidingProperty || "Competing Op"}</td>
+              <td><span style="color: #ef4444; font-weight: 700;">Collision</span></td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600; color: #94a3b8;">Configured Value</td>
+              <td>
+                <span class="conflict-value-box val-this">${activeConflict.patchAValue || JSON.stringify(patch.operation)}</span>
+              </td>
+              <td>
+                <span class="conflict-value-box val-competing">${activeConflict.patchBValue || "Competing Value"}</span>
+              </td>
+              <td><span style="color: #ef4444; font-weight: 700;">Conflict</span></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="conflict-actions-bar">
+          <button class="btn btn-primary" id="btn-resolve-keep-this" style="display: flex; align-items: center; gap: 6px;">
+            👑 Keep This Patch
+          </button>
+          <button class="btn btn-secondary" id="btn-resolve-keep-competing" style="display: flex; align-items: center; gap: 6px;">
+            Keep Competing (${activeConflict.patchBId})
+          </button>
+          <div class="inline-revision-box">
+            <input type="text" id="input-inline-revised-val" placeholder="Revise value..." value="${patch.operation.type === "style.set" ? "#6366f1" : ""}" />
+            <button class="btn btn-secondary" id="btn-resolve-revise-val" style="display: flex; align-items: center; gap: 4px;">
+              ✏️ Revise Value
+            </button>
+          </div>
+          <button class="btn btn-danger" id="btn-resolve-discard" style="display: flex; align-items: center; gap: 6px; margin-left: auto;">
+            🗑️ Discard Patch
+          </button>
+        </div>
+      </div>
+      `
+          : ""
+      }
 
       ${
         patch.status === "stale"
@@ -290,7 +382,9 @@
         </div>
 
         ${
-          patch.status === "verified"
+          activeConflict || patch.status === "conflict"
+            ? `<div class="gate-notice blocked">⛔ Release Gate Blocked: Unresolved collision detected on target '${activeConflict ? activeConflict.targetSelector : patch.targetFingerprint.selector}'. This patch cannot be deployed until conflicts are resolved.</div>`
+            : patch.status === "verified"
             ? `<div class="gate-notice success">🛡️ Verification Passed: Patch verified across Desktop & Mobile. Safe for production deployment.</div>`
             : patch.status === "verification_failed"
             ? `<div class="gate-notice blocked">⛔ Release Gate Blocked: Automated browser verification failed. This patch cannot be deployed until assertions pass. ${latestRun?.error ? `<br><small style="margin-top: 4px; display: block; font-family: var(--font-mono);">${latestRun.error}</small>` : ""}</div>`
@@ -609,6 +703,152 @@
       });
     }
 
+    // Conflict resolution button listeners
+    if (activeConflict) {
+      const keepThisBtn = patchDetailContainer.querySelector("#btn-resolve-keep-this");
+      if (keepThisBtn) {
+        keepThisBtn.addEventListener("click", async () => {
+          try {
+            keepThisBtn.disabled = true;
+            keepThisBtn.textContent = "Resolving...";
+            const res = await fetch(`${API_BASE}/patches/${patch.id}/resolve-conflict`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                strategy: "keep_this",
+                supersededPatchId: activeConflict.patchBId,
+                reason: `Retained patch '${patch.id}' over competing patch '${activeConflict.patchBId}'`,
+                actor: { id: "operator-1", name: "Operator", role: "developer" },
+              }),
+            });
+            if (!res.ok) {
+              const err = await res.json();
+              throw new Error(err.error || "Failed to resolve conflict");
+            }
+            showToast("Conflict resolved! Patch kept. Please re-run automated verification before releasing.", "success");
+            await loadPatches();
+            await renderPatchDetail();
+            await loadAuditEvents();
+          } catch (err) {
+            showToast(err.message, "error");
+            keepThisBtn.disabled = false;
+            keepThisBtn.textContent = "👑 Keep This Patch";
+          }
+        });
+      }
+
+      const keepCompetingBtn = patchDetailContainer.querySelector("#btn-resolve-keep-competing");
+      if (keepCompetingBtn) {
+        keepCompetingBtn.addEventListener("click", async () => {
+          try {
+            keepCompetingBtn.disabled = true;
+            keepCompetingBtn.textContent = "Resolving...";
+            const res = await fetch(`${API_BASE}/patches/${patch.id}/resolve-conflict`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                strategy: "discard",
+                supersededPatchId: activeConflict.patchBId,
+                reason: `Discarded in favor of competing patch '${activeConflict.patchBId}'`,
+                actor: { id: "operator-1", name: "Operator", role: "developer" },
+              }),
+            });
+            if (!res.ok) {
+              const err = await res.json();
+              throw new Error(err.error || "Failed to resolve conflict");
+            }
+            showToast(`Conflict resolved: Patch discarded. Competing patch '${activeConflict.patchBId}' active.`, "success");
+            await loadPatches();
+            await renderPatchDetail();
+            await loadAuditEvents();
+          } catch (err) {
+            showToast(err.message, "error");
+            keepCompetingBtn.disabled = false;
+            keepCompetingBtn.textContent = `Keep Competing (${activeConflict.patchBId})`;
+          }
+        });
+      }
+
+      const reviseValBtn = patchDetailContainer.querySelector("#btn-resolve-revise-val");
+      if (reviseValBtn) {
+        reviseValBtn.addEventListener("click", async () => {
+          const inputVal = patchDetailContainer.querySelector("#input-inline-revised-val");
+          const revisedVal = inputVal ? inputVal.value.trim() : "";
+          if (!revisedVal) {
+            showToast("Please enter a revised value", "error");
+            return;
+          }
+          try {
+            reviseValBtn.disabled = true;
+            reviseValBtn.textContent = "Revising...";
+            const revisedOp = { ...patch.operation };
+            if (revisedOp.type === "style.set") {
+              revisedOp.value = revisedVal;
+            } else if (revisedOp.type === "text.set") {
+              revisedOp.value = revisedVal;
+            } else if (revisedOp.type === "attribute.set") {
+              revisedOp.value = revisedVal;
+            }
+            const res = await fetch(`${API_BASE}/patches/${patch.id}/resolve-conflict`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                strategy: "revise_value",
+                supersededPatchId: activeConflict.patchBId,
+                revisedOperation: revisedOp,
+                reason: `Value revised to '${revisedVal}' to resolve conflict with '${activeConflict.patchBId}'`,
+                actor: { id: "operator-1", name: "Operator", role: "developer" },
+              }),
+            });
+            if (!res.ok) {
+              const err = await res.json();
+              throw new Error(err.error || "Failed to revise value");
+            }
+            showToast("Value revised! New patch version created. Please re-run verification before releasing.", "success");
+            await loadPatches();
+            await renderPatchDetail();
+            await loadAuditEvents();
+          } catch (err) {
+            showToast(err.message, "error");
+            reviseValBtn.disabled = false;
+            reviseValBtn.textContent = "✏️ Revise Value";
+          }
+        });
+      }
+
+      const discardBtn = patchDetailContainer.querySelector("#btn-resolve-discard");
+      if (discardBtn) {
+        discardBtn.addEventListener("click", async () => {
+          try {
+            discardBtn.disabled = true;
+            discardBtn.textContent = "Discarding...";
+            const res = await fetch(`${API_BASE}/patches/${patch.id}/resolve-conflict`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                strategy: "discard",
+                supersededPatchId: activeConflict.patchBId,
+                reason: "Patch discarded by developer during conflict triage",
+                actor: { id: "operator-1", name: "Operator", role: "developer" },
+              }),
+            });
+            if (!res.ok) {
+              const err = await res.json();
+              throw new Error(err.error || "Failed to discard patch");
+            }
+            showToast("Patch discarded and archived.", "success");
+            await loadPatches();
+            await renderPatchDetail();
+            await loadAuditEvents();
+          } catch (err) {
+            showToast(err.message, "error");
+            discardBtn.disabled = false;
+            discardBtn.textContent = "🗑️ Discard Patch";
+          }
+        });
+      }
+    }
+
     // Attach lifecycle event listeners
     patchDetailContainer.querySelectorAll("[data-target-status]").forEach((btn) => {
       btn.addEventListener("click", async () => {
@@ -618,13 +858,22 @@
     });
   }
 
-  function renderLifecycleActionButtons(patch) {
+  function renderLifecycleActionButtons(patch, activeConflict) {
     const previewUrl = `http://localhost:3000/?patchwork_preview=${patch.id}`;
     const launchPreviewBtn = `
       <a href="${previewUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
         👁️ Preview Storefront
       </a>
     `;
+
+    if (activeConflict || patch.status === "conflict") {
+      return `
+        ${launchPreviewBtn}
+        <button class="btn btn-danger" disabled title="Unresolved multi-patch collision prevents release">
+          ⛔ Release Blocked (Conflict)
+        </button>
+      `;
+    }
 
     if (patch.status === "stale") {
       return `
@@ -764,25 +1013,195 @@
 
       auditTimelineList.innerHTML = events
         .map(
-          (e) => `
-        <div class="audit-card">
-          <div>
-            <span class="audit-action-badge">${e.action}</span>
-            <span style="font-size: 0.85rem; margin-left: 8px;">Target: <code>${e.entityId}</code></span>
-            <div style="font-size: 0.78rem; color: var(--text-faint); margin-top: 4px;">
-              By: ${e.actor.name} (${e.actor.role})
+          (e) => {
+            const isRelease = e.entityType === "release";
+            const isRollback = e.action.includes("rollback");
+            const isConflict = e.details?.metadata?.actionType === "conflict_resolution";
+            const isVerification = e.entityType === "verification";
+            const badgeColor = isRollback
+              ? "#ef4444"
+              : isRelease
+              ? "#38bdf8"
+              : isConflict
+              ? "#f59e0b"
+              : isVerification
+              ? e.action.includes("passed")
+                ? "#10b981"
+                : "#ef4444"
+              : "#a855f7";
+
+            return `
+        <div class="audit-card" style="border-left: 3px solid ${badgeColor}; padding: 14px 18px; margin-bottom: 12px; background: rgba(30, 41, 59, 0.4); border-radius: var(--radius-sm); border-top: 1px solid var(--border-light); border-right: 1px solid var(--border-light); border-bottom: 1px solid var(--border-light);">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="audit-action-badge" style="background: rgba(255,255,255,0.08); color: ${badgeColor}; border: 1px solid ${badgeColor}; font-weight: 700;">
+                ${e.action}
+              </span>
+              <span style="font-size: 0.85rem; color: #f8fafc; font-family: var(--font-mono);">
+                ${e.entityType}:${e.entityId}
+              </span>
+            </div>
+            <div style="font-size: 0.78rem; color: var(--text-faint);">
+              ${new Date(e.timestamp).toLocaleString()}
             </div>
           </div>
-          <div style="font-size: 0.78rem; color: var(--text-faint);">
-            ${new Date(e.timestamp).toLocaleTimeString()}
+          <div style="font-size: 0.82rem; color: #cbd5e1; margin-top: 4px;">
+            ${e.details?.reason ? `<span>${e.details.reason}</span>` : ""}
+            ${e.details?.fromStatus && e.details?.toStatus ? `<span style="margin-left: 6px; font-family: var(--font-mono); color: #94a3b8;">(${e.details.fromStatus} → ${e.details.toStatus})</span>` : ""}
+            ${e.details?.metadata?.strategy ? `<span class="chip" style="margin-left: 8px; font-size: 0.72rem;">Strategy: ${e.details.metadata.strategy}</span>` : ""}
+          </div>
+          <div style="font-size: 0.75rem; color: var(--text-faint); margin-top: 6px;">
+            Actor: <strong>${e.actor.name}</strong> (${e.actor.role})
           </div>
         </div>
-      `
+      `;
+          }
         )
         .join("");
     } catch (err) {
       showToast("Failed to load audit trail", "error");
     }
+  }
+
+  // Multi-Patch Release Modal
+  const releaseModal = document.getElementById("release-bundle-modal");
+  const openReleaseModalBtn = document.getElementById("open-release-modal-btn");
+  const closeReleaseModalBtn = document.getElementById("close-release-modal-btn");
+  const cancelReleaseModalBtn = document.getElementById("cancel-release-modal-btn");
+  const releaseBundleForm = document.getElementById("release-bundle-form");
+  const releaseModalChecklist = document.getElementById("release-modal-checklist");
+  const selectedPatchesCount = document.getElementById("selected-patches-count");
+  const bundleGateWarning = document.getElementById("bundle-gate-warning");
+  const submitReleaseBundleBtn = document.getElementById("submit-release-bundle-btn");
+
+  if (openReleaseModalBtn) {
+    openReleaseModalBtn.addEventListener("click", () => {
+      if (!releaseModal) return;
+      releaseModal.classList.remove("hidden");
+
+      releaseModalChecklist.innerHTML = allPatches
+        .map((p) => {
+          const isVerified = p.status === "verified";
+          return `
+          <label class="checklist-item ${!isVerified ? "disabled" : ""}">
+            <div class="checklist-item-left">
+              <input type="checkbox" name="bundle_patch" value="${p.id}" ${!isVerified ? "disabled" : ""} />
+              <div>
+                <div style="font-weight: 600; font-size: 0.88rem; color: #f8fafc;">${p.name}</div>
+                <div style="font-size: 0.76rem; color: var(--text-faint);"><code>${p.targetFingerprint.selector}</code> • Op: ${p.operation.type}</div>
+              </div>
+            </div>
+            <div>
+              <span class="status-badge status-${p.status}">${p.status.replace("_", " ")}</span>
+            </div>
+          </label>
+        `;
+        })
+        .join("");
+
+      updateBundleSelectionState();
+
+      releaseModalChecklist.querySelectorAll("input[type='checkbox']").forEach((cb) => {
+        cb.addEventListener("change", updateBundleSelectionState);
+      });
+    });
+  }
+
+  async function updateBundleSelectionState() {
+    if (!releaseModalChecklist) return;
+    const checkedBoxes = Array.from(
+      releaseModalChecklist.querySelectorAll("input[name='bundle_patch']:checked")
+    );
+    const selectedIds = checkedBoxes.map((cb) => cb.value);
+    if (selectedPatchesCount) {
+      selectedPatchesCount.textContent = `${selectedIds.length} Selected`;
+    }
+
+    if (selectedIds.length === 0) {
+      bundleGateWarning.classList.add("hidden");
+      bundleGateWarning.innerHTML = "";
+      submitReleaseBundleBtn.disabled = true;
+      return;
+    }
+
+    // Pre-flight collision check across selected patches
+    try {
+      const checkRes = await fetch(`${API_BASE}/patches/check-conflicts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ patchIds: selectedIds }),
+      });
+      if (checkRes.ok) {
+        const checkData = await checkRes.json();
+        if (checkData.hasConflicts && checkData.conflicts.length > 0) {
+          const first = checkData.conflicts[0];
+          bundleGateWarning.classList.remove("hidden");
+          bundleGateWarning.innerHTML = `⛔ Mutual Conflict Blocked: Patches '${first.patchAId}' and '${first.patchBId}' collide on '${first.targetSelector}'. Both cannot be released together.`;
+          submitReleaseBundleBtn.disabled = true;
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn("Bundle conflict check error", e);
+    }
+
+    bundleGateWarning.classList.add("hidden");
+    bundleGateWarning.innerHTML = "";
+    submitReleaseBundleBtn.disabled = false;
+  }
+
+  if (closeReleaseModalBtn) {
+    closeReleaseModalBtn.addEventListener("click", () => releaseModal?.classList.add("hidden"));
+  }
+  if (cancelReleaseModalBtn) {
+    cancelReleaseModalBtn.addEventListener("click", () => releaseModal?.classList.add("hidden"));
+  }
+
+  if (releaseBundleForm) {
+    releaseBundleForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const checkedBoxes = Array.from(
+        releaseModalChecklist.querySelectorAll("input[name='bundle_patch']:checked")
+      );
+      const selectedIds = checkedBoxes.map((cb) => cb.value);
+      if (selectedIds.length === 0) return;
+
+      const summaryInput = document.getElementById("release-summary-input");
+      const changeSummary = summaryInput ? summaryInput.value.trim() : undefined;
+
+      try {
+        submitReleaseBundleBtn.disabled = true;
+        submitReleaseBundleBtn.textContent = "Deploying Release...";
+
+        const res = await fetch(`${API_BASE}/websites/${activeWebsiteId}/releases`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            patchIds: selectedIds,
+            actor: { id: "operator-1", name: "Operator", role: "developer" },
+            changeSummary: changeSummary || `Release Bundle containing ${selectedIds.length} verified patches`,
+          }),
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || "Failed to publish release bundle");
+        }
+
+        const release = await res.json();
+        showToast(`Release V${release.version} deployed with ${selectedIds.length} patches!`, "success");
+        releaseModal.classList.add("hidden");
+        releaseBundleForm.reset();
+        await loadReleases();
+        await loadPatches();
+        await loadAuditEvents();
+      } catch (err) {
+        showToast(err.message, "error");
+      } finally {
+        submitReleaseBundleBtn.disabled = false;
+        submitReleaseBundleBtn.textContent = "🚀 Publish Release Bundle";
+      }
+    });
   }
 
   // Modal Open / Close
