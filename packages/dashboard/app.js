@@ -279,6 +279,8 @@
         </div>
       </div>
 
+      ${renderStateBanner(patch)}
+
       ${
         activeConflict
           ? `
@@ -1077,6 +1079,79 @@
         await transitionStatus(patch.id, targetStatus);
       });
     });
+  }
+
+  function renderStateBanner(patch) {
+    if (patch.status === "published") {
+      return `
+        <div class="state-banner published-banner">
+          <div class="state-banner-icon">🟢</div>
+          <div class="state-banner-content">
+            <strong>Active in Production Release</strong>
+            <span>This verified patch is live on <code>${STOREFRONT_URL}</code>. All visitors receive these changes.</span>
+          </div>
+          <a href="${STOREFRONT_URL}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="font-size: 0.8rem; padding: 5px 12px; text-decoration: none;">
+            Open Live Storefront ↗
+          </a>
+        </div>
+      `;
+    }
+    if (patch.status === "verified") {
+      return `
+        <div class="state-banner verified-banner">
+          <div class="state-banner-icon">🛡️</div>
+          <div class="state-banner-content">
+            <strong>Verification Passed (Release Ready)</strong>
+            <span>Automated cross-viewport Playwright assertions passed. Patch is approved to be bundled and published.</span>
+          </div>
+        </div>
+      `;
+    }
+    if (patch.status === "previewing" || patch.status === "draft") {
+      return `
+        <div class="state-banner preview-banner">
+          <div class="state-banner-icon">🔬</div>
+          <div class="state-banner-content">
+            <strong>Isolated Sandbox Preview State</strong>
+            <span>Mutations are active only when visiting with <code>?patchwork_preview=${patch.id}</code>. The live production storefront remains 100% unpatched.</span>
+          </div>
+        </div>
+      `;
+    }
+    if (patch.status === "verification_failed") {
+      return `
+        <div class="state-banner gated-banner">
+          <div class="state-banner-icon">⛔</div>
+          <div class="state-banner-content">
+            <strong>Automated Verification Gate Blocked</strong>
+            <span>Browser verification failed. Release is strictly blocked until assertions pass. Click "Explain Failure with AI" below for diagnostics.</span>
+          </div>
+        </div>
+      `;
+    }
+    if (patch.status === "stale") {
+      return `
+        <div class="state-banner stale-banner">
+          <div class="state-banner-icon">⚠️</div>
+          <div class="state-banner-content">
+            <strong>Target Element Drift Detected</strong>
+            <span>The target selector no longer matches the live DOM. Use the recovery engine below to rebind the patch.</span>
+          </div>
+        </div>
+      `;
+    }
+    if (patch.status === "conflict") {
+      return `
+        <div class="state-banner conflict-banner">
+          <div class="state-banner-icon">⚡</div>
+          <div class="state-banner-content">
+            <strong>Multi-Patch Collision Warning</strong>
+            <span>Overlaps with another patch targeting the same element. Resolve the collision before verification and release.</span>
+          </div>
+        </div>
+      `;
+    }
+    return "";
   }
 
   function renderLifecycleActionButtons(patch, activeConflict) {

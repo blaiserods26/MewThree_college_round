@@ -168,3 +168,30 @@ describe("Dashboard refresh persistence", () => {
     expect(doc.getElementById("patch-list-container")!.textContent).toContain("Alpha patch");
   });
 });
+
+describe("Dashboard Phase 9 Visual Polish", () => {
+  it("renders an isolated sandbox banner for draft/previewing patches", async () => {
+    const { doc } = await openDashboard(healthyApi());
+    const banner = doc.querySelector(".state-banner.preview-banner");
+    expect(banner).not.toBeNull();
+    expect(banner!.textContent).toContain("Isolated Sandbox Preview State");
+  });
+
+  it("renders an active production banner for published patches", async () => {
+    const publishedPatch = patchFixture("pub-1", "Published Patch", "published");
+    const route: Route = (url) => {
+      const { pathname } = new URL(url);
+      if (pathname === "/api/patches") return json([publishedPatch]);
+      if (pathname === "/api/patches/check-conflicts") return json({ conflicts: [] });
+      if (pathname.endsWith("/verifications")) return json([]);
+      if (pathname === "/api/releases") return json([]);
+      if (pathname === "/api/audit-events") return json([]);
+      return json({ error: "not found" }, 404);
+    };
+    const { doc } = await openDashboard(route);
+    const banner = doc.querySelector(".state-banner.published-banner");
+    expect(banner).not.toBeNull();
+    expect(banner!.textContent).toContain("Active in Production Release");
+    expect(banner!.textContent).toContain("Open Live Storefront");
+  });
+});

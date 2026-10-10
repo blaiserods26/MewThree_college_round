@@ -1164,4 +1164,92 @@ body {
   font-weight: 600;
 }
 
+/* Phase 9 Polish: State Banners & Isolation Contrast */
+.state-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 18px;
+  border-radius: var(--radius-md);
+  margin-bottom: 20px;
+  font-size: 0.88rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  animation: fadeIn 0.25s ease;
+}
+
+.state-banner-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.state-banner-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-grow: 1;
+}
+
+.state-banner-content strong {
+  font-size: 0.92rem;
+  color: #f8fafc;
+  letter-spacing: -0.01em;
+}
+
+.state-banner-content span {
+  font-size: 0.82rem;
+  color: #cbd5e1;
+  line-height: 1.4;
+}
+
+.state-banner.published-banner {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  border-left: 4px solid #10b981;
+}
+
+.state-banner.verified-banner {
+  background: rgba(14, 165, 233, 0.12);
+  border: 1px solid rgba(14, 165, 233, 0.45);
+  border-left: 4px solid #0284c7;
+}
+
+.state-banner.preview-banner {
+  background: rgba(168, 85, 247, 0.12);
+  border: 1px solid rgba(168, 85, 247, 0.45);
+  border-left: 4px solid #a855f7;
+}
+
+.state-banner.gated-banner {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  border-left: 4px solid #ef4444;
+}
+
+.state-banner.stale-banner {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  border-left: 4px solid #f59e0b;
+}
+
+.state-banner.conflict-banner {
+  background: rgba(244, 63, 94, 0.12);
+  border: 1px solid rgba(244, 63, 94, 0.45);
+  border-left: 4px solid #f43f5e;
+}
+
+/* Screenshot Diff Hover Zoom */
+.screenshot-img-frame img {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+}
+
+.screenshot-img-frame img:hover {
+  transform: scale(1.02);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 
