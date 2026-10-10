@@ -275,50 +275,50 @@ Do **not** implement arbitrary code execution as the default patch mechanism.
 
 ### Step 4.1 — Separate preview from published state
 
-- [ ] Define a preview mode or isolated browser context.
-- [ ] Apply draft patches only in preview.
-- [ ] Ensure preview actions do not update the active production release.
-- [ ] Provide a clear label showing whether the user is viewing Preview or Published.
-- [ ] Capture a screenshot of the patched state.
-- [ ] Provide a way to reset preview to the baseline.
+- [x] Define a preview mode or isolated browser context.
+- [x] Apply draft patches only in preview.
+- [x] Ensure preview actions do not update the active production release.
+- [x] Provide a clear label showing whether the user is viewing Preview or Published.
+- [x] Capture a screenshot of the patched state.
+- [x] Provide a way to reset preview to the baseline.
 
 ### Step 4.2 — Implement the Playwright verification worker
 
-- [ ] Launch the controlled demo website in a test browser.
-- [ ] Apply the proposed patch in the test environment.
-- [ ] Verify the target exists and is unique.
-- [ ] Verify the expected text/style/attribute after the patch.
-- [ ] Verify the relevant element is visible and enabled when expected.
-- [ ] Exercise the key interaction for the selected scenario.
-- [ ] Capture console errors and test failures.
-- [ ] Capture a screenshot for review.
-- [ ] Store the test run status, output, timestamp, and relevant screenshots/paths.
+- [x] Launch the controlled demo website in a test browser.
+- [x] Apply the proposed patch in the test environment.
+- [x] Verify the target exists and is unique.
+- [x] Verify the expected text/style/attribute after the patch.
+- [x] Verify the relevant element is visible and enabled when expected.
+- [x] Exercise the key interaction for the selected scenario.
+- [x] Capture console errors and test failures.
+- [x] Capture a screenshot for review.
+- [x] Store the test run status, output, timestamp, and relevant screenshots/paths.
 
 ### Step 4.3 — Add visual regression checks
 
-- [ ] Capture a baseline screenshot at a fixed viewport.
-- [ ] Capture a patched screenshot at the same viewport.
-- [ ] Use a basic screenshot comparison if time permits.
-- [ ] Set a practical threshold and explain that visual comparisons can be noisy.
-- [ ] Add a mobile viewport check for the checkout-button scenario.
-- [ ] Ensure a desktop regression check also runs.
+- [x] Capture a baseline screenshot at a fixed viewport.
+- [x] Capture a patched screenshot at the same viewport.
+- [x] Use a basic screenshot comparison if time permits.
+- [x] Set a practical threshold and explain that visual comparisons can be noisy.
+- [x] Add a mobile viewport check for the checkout-button scenario.
+- [x] Ensure a desktop regression check also runs.
 
 ### Step 4.4 — Make verification control the workflow
 
-- [ ] A successful verification marks the patch as verified.
-- [ ] A failed mandatory test marks the patch as verification_failed.
-- [ ] A failed patch cannot be published through the normal UI/API.
-- [ ] Display the exact failed assertion in the dashboard.
-- [ ] Do not invent or hardcode passing results in the UI.
-- [ ] Test one deliberately broken patch to prove that the gate works.
+- [x] A successful verification marks the patch as verified.
+- [x] A failed mandatory test marks the patch as verification_failed.
+- [x] A failed patch cannot be published through the normal UI/API.
+- [x] Display the exact failed assertion in the dashboard.
+- [x] Do not invent or hardcode passing results in the UI.
+- [x] Test one deliberately broken patch to prove that the gate works.
 
 **Phase exit check**
 
-- [ ] Draft changes appear in preview but not in the published view.
-- [ ] Playwright actually runs and returns results.
-- [ ] A passing patch can become verified.
-- [ ] A failing patch is blocked from publication.
-- [ ] Screenshots and failure messages are visible to the developer.
+- [x] Draft changes appear in preview but not in the published view.
+- [x] Playwright actually runs and returns results.
+- [x] A passing patch can become verified.
+- [x] A failing patch is blocked from publication.
+- [x] Screenshots and failure messages are visible to the developer.
 
 **Critical milestone:** By the end of this phase, you should already have a meaningful demo. If the schedule is slipping, prioritize this working vertical slice before adding advanced features.
 

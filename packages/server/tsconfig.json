@@ -4,7 +4,8 @@
     "outDir": "./dist",
     "baseUrl": ".",
     "paths": {
-      "@patchwork/contracts": ["../contracts/dist/index.d.ts"]
+      "@patchwork/contracts": ["../contracts/dist/index.d.ts"],
+      "@patchwork/verification": ["../verification/dist/index.d.ts"]
     }
   },
   "include": ["src/**/*"]

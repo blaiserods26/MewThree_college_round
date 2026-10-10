@@ -131,6 +131,16 @@ export interface VerificationAssertionResult {
   errorMessage?: string;
 }
 
+export interface VisualDiffResult {
+  diffPixels: number;
+  totalPixels: number;
+  diffPercentage: number;
+  passed: boolean;
+  baselineScreenshotBase64?: string;
+  patchedScreenshotBase64?: string;
+  diffScreenshotBase64?: string;
+}
+
 export interface VerificationRun {
   id: string;
   patchId: string;
@@ -145,6 +155,10 @@ export interface VerificationRun {
   durationMs: number;
   assertions: VerificationAssertionResult[];
   screenshotBase64?: string;
+  baselineScreenshotBase64?: string;
+  visualDiff?: VisualDiffResult;
+  consoleErrors?: string[];
+  viewportsRun?: Array<{ name: string; width: number; height: number; passed: boolean }>;
   error?: string;
 }
 

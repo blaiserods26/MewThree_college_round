@@ -1,12 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { AuditEvent, Patch, Release, Website } from "@patchwork/contracts";
+import type { AuditEvent, Patch, Release, VerificationRun, Website } from "@patchwork/contracts";
 
 export interface DatabaseSchema {
   websites: Record<string, Website>;
   patches: Record<string, Patch>;
   releases: Record<string, Release>;
   auditEvents: AuditEvent[];
+  verificationRuns: VerificationRun[];
 }
 
 export class JsonFileStore {
@@ -22,7 +23,14 @@ export class JsonFileStore {
     try {
       if (fs.existsSync(this.filePath)) {
         const raw = fs.readFileSync(this.filePath, "utf-8");
-        return JSON.parse(raw);
+        const parsed = JSON.parse(raw);
+        return {
+          websites: parsed.websites || {},
+          patches: parsed.patches || {},
+          releases: parsed.releases || {},
+          auditEvents: parsed.auditEvents || [],
+          verificationRuns: parsed.verificationRuns || [],
+        };
       }
     } catch (err) {
       console.warn("Failed to read database file, initializing empty:", err);
@@ -40,6 +48,7 @@ export class JsonFileStore {
       patches: {},
       releases: {},
       auditEvents: [],
+      verificationRuns: [],
     };
   }
 
@@ -107,6 +116,22 @@ export class JsonFileStore {
 
   public addAuditEvent(event: AuditEvent): void {
     this.data.auditEvents.unshift(event); // newest first
+    this.save();
+  }
+
+  public getVerificationRuns(patchId?: string): VerificationRun[] {
+    if (patchId) {
+      return this.data.verificationRuns.filter((r) => r.patchId === patchId);
+    }
+    return this.data.verificationRuns;
+  }
+
+  public getVerificationRun(runId: string): VerificationRun | undefined {
+    return this.data.verificationRuns.find((r) => r.id === runId);
+  }
+
+  public saveVerificationRun(run: VerificationRun): void {
+    this.data.verificationRuns.unshift(run); // newest first
     this.save();
   }
 }

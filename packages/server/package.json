@@ -12,6 +12,7 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@patchwork/contracts": "*"
+    "@patchwork/contracts": "*",
+    "@patchwork/verification": "*"
   }
 }

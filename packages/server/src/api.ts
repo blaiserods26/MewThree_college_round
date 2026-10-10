@@ -164,6 +164,34 @@ export function createServer(service: PatchService): http.Server {
         return sendJson(res, 200, updated);
       }
 
+      // Execute Automated Verification for Patch
+      const verifyMatch = pathname.match(/^\/api\/patches\/([^/]+)\/verify$/);
+      if (verifyMatch && method === "POST") {
+        const body = await parseJsonBody(req);
+        const host = req.headers.host || "localhost:4000";
+        const run = await service.verifyPatch(verifyMatch[1], {
+          actor: body.actor || { id: "anonymous", name: "Anonymous", role: "developer" },
+          websiteBaseUrl: body.websiteBaseUrl,
+          apiBaseUrl: body.apiBaseUrl || `http://${host}/api`,
+        });
+        return sendJson(res, 200, run);
+      }
+
+      // List Verification Runs for Patch
+      const verificationsMatch = pathname.match(/^\/api\/patches\/([^/]+)\/verifications$/);
+      if (verificationsMatch && method === "GET") {
+        const runs = service.listVerificationRuns(verificationsMatch[1]);
+        return sendJson(res, 200, runs);
+      }
+
+      // Single Verification Run Detail
+      const runDetailMatch = pathname.match(/^\/api\/verifications\/([^/]+)$/);
+      if (runDetailMatch && method === "GET") {
+        const run = service.getVerificationRun(runDetailMatch[1]);
+        if (!run) return sendJson(res, 404, { error: "Verification run not found" });
+        return sendJson(res, 200, run);
+      }
+
       // 3. Audit Events Endpoints
       if (pathname === "/api/audit-events" && method === "GET") {
         const websiteId = parsedUrl.searchParams.get("websiteId") || undefined;

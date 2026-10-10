@@ -7,6 +7,7 @@ import {
   type PatchVersion,
   type Release,
   type TargetFingerprint,
+  type VerificationRun,
   type Website,
   canPublishPatch,
   computeRollback,
@@ -14,6 +15,7 @@ import {
   validatePatchOperation,
   validatePatchTransition,
 } from "@patchwork/contracts";
+import { runPatchVerification } from "@patchwork/verification";
 import { JsonFileStore } from "./store.js";
 
 export interface CreatePatchInput {
@@ -349,5 +351,98 @@ export class PatchService {
       events = events.filter((e) => e.websiteId === websiteId);
     }
     return events;
+  }
+
+  public async verifyPatch(
+    patchId: string,
+    options: { actor?: AuditActor; websiteBaseUrl?: string; apiBaseUrl?: string } = {}
+  ): Promise<VerificationRun> {
+    const patch = this.store.getPatch(patchId);
+    if (!patch) {
+      throw new Error(`Patch '${patchId}' not found.`);
+    }
+
+    const actor: AuditActor = options.actor || {
+      id: "automated-verifier",
+      name: "Playwright Verification Worker",
+      role: "automated-system",
+    };
+
+    const website = this.store.getWebsite(patch.websiteId);
+    const websiteBaseUrl =
+      options.websiteBaseUrl || website?.baseUrl || "http://localhost:3000";
+
+    // 1. Transition to previewing if currently draft or verification_failed
+    const fromStatus = patch.status;
+    if (patch.status === "draft" || patch.status === "verification_failed") {
+      patch.status = "previewing";
+      patch.updatedAt = new Date().toISOString();
+      this.store.savePatch(patch);
+    }
+
+    // 2. Emit verification.started audit event
+    const startEvent = createAuditEvent({
+      websiteId: patch.websiteId,
+      entityType: "verification",
+      entityId: patch.id,
+      action: "verification.started",
+      actor,
+      details: {
+        fromStatus,
+        toStatus: "previewing",
+        metadata: { websiteBaseUrl },
+      },
+    });
+    this.store.addAuditEvent(startEvent);
+
+    // 3. Execute automated runner
+    const run = await runPatchVerification({
+      patch,
+      websiteBaseUrl,
+      apiBaseUrl: options.apiBaseUrl,
+    });
+
+    // 4. Save verification run
+    this.store.saveVerificationRun(run);
+
+    // 5. Update patch status based on verification outcome
+    const targetStatus: PatchStatus =
+      run.status === "passed" ? "verified" : "verification_failed";
+    const priorStatus = patch.status;
+    patch.status = targetStatus;
+    patch.updatedAt = new Date().toISOString();
+    this.store.savePatch(patch);
+
+    // 6. Emit verification completion audit event
+    const completionEvent = createAuditEvent({
+      websiteId: patch.websiteId,
+      entityType: "verification",
+      entityId: patch.id,
+      action: run.status === "passed" ? "verification.passed" : "verification.failed",
+      actor,
+      details: {
+        fromStatus: priorStatus,
+        toStatus: targetStatus,
+        reason: run.error,
+        metadata: {
+          runId: run.id,
+          durationMs: run.durationMs,
+          passedAssertions: run.assertions.filter((a) => a.passed).length,
+          totalAssertions: run.assertions.length,
+          diffPercentage: run.visualDiff?.diffPercentage,
+        },
+      },
+    });
+    this.store.addAuditEvent(completionEvent);
+
+    return run;
+  }
+
+  public listVerificationRuns(patchId?: string): VerificationRun[] {
+    return this.store.getVerificationRuns(patchId);
+  }
+
+  public getVerificationRun(runId: string): VerificationRun | undefined {
+    return this.store.getVerificationRun(runId);
   }
 }

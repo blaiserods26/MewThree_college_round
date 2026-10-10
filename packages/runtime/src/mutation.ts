@@ -220,3 +220,5 @@ export function revertPatchFromDom(
     };
   }
 }
+
+export const revertPatchOnDom = revertPatchFromDom;

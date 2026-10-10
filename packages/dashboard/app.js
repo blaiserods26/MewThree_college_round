@@ -167,9 +167,18 @@
   }
 
   // Render Patch Detail
-  function renderPatchDetail() {
+  async function renderPatchDetail() {
     const patch = allPatches.find((p) => p.id === selectedPatchId);
     if (!patch) return;
+
+    let runs = [];
+    try {
+      const res = await fetch(`${API_BASE}/patches/${patch.id}/verifications`);
+      if (res.ok) runs = await res.json();
+    } catch (e) {
+      console.warn("Could not load verification runs", e);
+    }
+    const latestRun = runs[0];
 
     patchDetailContainer.innerHTML = `
       <div class="detail-header-card">
@@ -181,6 +190,128 @@
         <div class="detail-actions-bar">
           ${renderLifecycleActionButtons(patch)}
         </div>
+      </div>
+
+      <!-- Playwright Verification & Gate Panel -->
+      <div class="verification-card">
+        <div class="verification-header">
+          <div class="verification-title-row">
+            <h4 class="verification-title">
+              <span>🤖 Playwright Verification & Gate</span>
+            </h4>
+            <span class="status-badge status-${patch.status === "verified" ? "verified" : patch.status === "verification_failed" ? "verification_failed" : "previewing"}">
+              ${patch.status === "verified" ? "Verified" : patch.status === "verification_failed" ? "Verification Failed" : "Pending Checks"}
+            </span>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-primary" id="btn-run-verify" style="display: flex; align-items: center; gap: 6px;">
+              ⚡ Run Verification
+            </button>
+            <button class="btn btn-secondary" id="btn-demo-failing-verify" title="Creates and runs a broken patch to prove gate rejection">
+              🧪 Test Failing Gate
+            </button>
+          </div>
+        </div>
+
+        ${
+          patch.status === "verified"
+            ? `<div class="gate-notice success">🛡️ Verification Passed: Patch verified across Desktop & Mobile. Safe for production deployment.</div>`
+            : patch.status === "verification_failed"
+            ? `<div class="gate-notice blocked">⛔ Release Gate Blocked: Automated browser verification failed. This patch cannot be deployed until assertions pass. ${latestRun?.error ? `<br><small style="margin-top: 4px; display: block; font-family: var(--font-mono);">${latestRun.error}</small>` : ""}</div>`
+            : `<div class="gate-notice blocked">⏳ Unverified: This patch has not passed verification yet. It is blocked from production releases.</div>`
+        }
+
+        ${
+          latestRun
+            ? `
+          <div class="verification-meta-chips">
+            <span>⏱️ Duration: ${latestRun.durationMs}ms</span>
+            <span>📐 Viewports: ${latestRun.viewportsRun ? latestRun.viewportsRun.map((v) => `${v.name} (${v.width}x${v.height})`).join(", ") : "Desktop & Mobile"}</span>
+            <span>🕒 Completed: ${new Date(latestRun.completedAt).toLocaleTimeString()}</span>
+          </div>
+
+          <div>
+            <h5 style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px;">Assertion Results (${latestRun.assertions.filter((a) => a.passed).length}/${latestRun.assertions.length} Passed)</h5>
+            <div class="assertion-list">
+              ${latestRun.assertions
+                .map(
+                  (a) => `
+                <div class="assertion-item ${a.passed ? "passed" : "failed"}">
+                  <div>
+                    <span class="assertion-key">${a.assertionId}</span>
+                    <div class="assertion-msg">${a.actualValue || a.errorMessage || ""}</div>
+                  </div>
+                  <span class="assertion-badge ${a.passed ? "pass" : "fail"}">${a.passed ? "PASS" : "FAIL"}</span>
+                </div>
+              `
+                )
+                .join("")}
+            </div>
+          </div>
+
+          ${
+            latestRun.screenshotBase64 || latestRun.baselineScreenshotBase64
+              ? `
+            <div>
+              <h5 style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px;">Visual Evidence & Diff (${latestRun.visualDiff ? `${latestRun.visualDiff.diffPercentage}% diff` : "Synchronized"})</h5>
+              <div class="visual-diff-grid">
+                ${
+                  latestRun.baselineScreenshotBase64
+                    ? `
+                  <div class="screenshot-preview-box">
+                    <div class="screenshot-preview-label">
+                      <span>Baseline (Unpatched)</span>
+                      <span>1280x800</span>
+                    </div>
+                    <div class="screenshot-img-frame">
+                      <img src="data:image/png;base64,${latestRun.baselineScreenshotBase64}" alt="Baseline Screenshot" />
+                    </div>
+                  </div>
+                `
+                    : ""
+                }
+                ${
+                  latestRun.screenshotBase64
+                    ? `
+                  <div class="screenshot-preview-box">
+                    <div class="screenshot-preview-label">
+                      <span style="color: #4ade80;">Preview (Patched)</span>
+                      <span>Isolated</span>
+                    </div>
+                    <div class="screenshot-img-frame">
+                      <img src="data:image/png;base64,${latestRun.screenshotBase64}" alt="Patched Preview Screenshot" />
+                    </div>
+                  </div>
+                `
+                    : ""
+                }
+                ${
+                  latestRun.visualDiff?.diffScreenshotBase64
+                    ? `
+                  <div class="screenshot-preview-box">
+                    <div class="screenshot-preview-label">
+                      <span style="color: #f43f5e;">Diff Overlay</span>
+                      <span>${latestRun.visualDiff.diffPercentage}% Changed</span>
+                    </div>
+                    <div class="screenshot-img-frame">
+                      <img src="data:image/png;base64,${latestRun.visualDiff.diffScreenshotBase64}" alt="Visual Diff Mask" />
+                    </div>
+                  </div>
+                `
+                    : ""
+                }
+              </div>
+            </div>
+          `
+              : ""
+          }
+        `
+            : `
+          <div style="padding: 16px; text-align: center; color: var(--text-faint); font-size: 0.85rem; border: 1px dashed var(--border-light); border-radius: 8px;">
+            No browser verification run recorded yet. Click "Run Verification" to launch Playwright.
+          </div>
+        `
+        }
       </div>
 
       <div class="card-section">
@@ -236,6 +367,116 @@
       </div>
     `;
 
+    // Event handlers for verification triggers
+    const runVerifyHandler = async () => {
+      const verifyBtn = patchDetailContainer.querySelector("#btn-run-verify");
+      const actionVerifyBtn = patchDetailContainer.querySelector("#btn-action-verify");
+      if (verifyBtn) {
+        verifyBtn.disabled = true;
+        verifyBtn.innerHTML = "⏳ Running Playwright...";
+      }
+      if (actionVerifyBtn) {
+        actionVerifyBtn.disabled = true;
+        actionVerifyBtn.innerHTML = "⏳ Running Playwright...";
+      }
+      showToast("Launching Playwright verification across Desktop & Mobile...", "info");
+      try {
+        const res = await fetch(`${API_BASE}/patches/${patch.id}/verify`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ websiteBaseUrl: "http://localhost:3000" }),
+        });
+        const run = await res.json();
+        if (run.status === "passed") {
+          showToast(`Verification passed in ${run.durationMs}ms! Patch is verified.`, "success");
+        } else {
+          showToast(`Verification failed: ${run.error || "Assertions failed"}`, "error");
+        }
+        await loadPatches();
+        await renderPatchDetail();
+      } catch (err) {
+        showToast(err.message, "error");
+        await renderPatchDetail();
+      }
+    };
+
+    const btnRunVerify = patchDetailContainer.querySelector("#btn-run-verify");
+    if (btnRunVerify) btnRunVerify.addEventListener("click", runVerifyHandler);
+
+    const btnActionVerify = patchDetailContainer.querySelector("#btn-action-verify");
+    if (btnActionVerify) btnActionVerify.addEventListener("click", runVerifyHandler);
+
+    // Failing gate demo button
+    const btnDemoFail = patchDetailContainer.querySelector("#btn-demo-failing-verify");
+    if (btnDemoFail) {
+      btnDemoFail.addEventListener("click", async () => {
+        showToast("Creating broken patch to demonstrate verification gate...", "info");
+        try {
+          const createRes = await fetch(`${API_BASE}/patches`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              websiteId: activeWebsiteId,
+              name: "Broken Selector Test (Simulated Flaw)",
+              targetFingerprint: {
+                tag: "button",
+                selector: "#deliberately-missing-checkout-btn-404",
+                text: "Ghost Button",
+              },
+              operation: {
+                type: "text.set",
+                value: "Ghost Button Text",
+              },
+              actor: { id: "qa-verifier", name: "QA Gate Verifier", role: "qa" },
+            }),
+          });
+          const brokenPatch = await createRes.json();
+          selectedPatchId = brokenPatch.id;
+          await loadPatches();
+
+          showToast("Running Playwright verification on broken patch...", "info");
+          await fetch(`${API_BASE}/patches/${brokenPatch.id}/verify`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ websiteBaseUrl: "http://localhost:3000" }),
+          });
+
+          await loadPatches();
+          await renderPatchDetail();
+          showToast("Gate triggered: patch marked 'verification_failed' and release blocked!", "error");
+        } catch (err) {
+          showToast(err.message, "error");
+        }
+      });
+    }
+
+    // Publish verified button
+    const publishBtn = patchDetailContainer.querySelector("#btn-publish-verified");
+    if (publishBtn) {
+      publishBtn.addEventListener("click", async () => {
+        try {
+          const res = await fetch(`${API_BASE}/websites/${activeWebsiteId}/releases`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              patchIds: [patch.id],
+              actor: { id: "operator-1", name: "Operator", role: "developer" },
+              changeSummary: `Release containing verified patch '${patch.name}'`,
+            }),
+          });
+          if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.error || "Failed to publish release");
+          }
+          showToast(`Release published successfully!`, "success");
+          await loadPatches();
+          await loadReleases();
+        } catch (err) {
+          showToast(err.message, "error");
+        }
+      });
+    }
+
     // Attach lifecycle event listeners
     patchDetailContainer.querySelectorAll("[data-target-status]").forEach((btn) => {
       btn.addEventListener("click", async () => {
@@ -246,19 +487,38 @@
   }
 
   function renderLifecycleActionButtons(patch) {
+    const previewUrl = `http://localhost:3000/?patchwork_preview=${patch.id}`;
+    const launchPreviewBtn = `
+      <a href="${previewUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+        👁️ Preview Storefront
+      </a>
+    `;
+
     if (patch.status === "draft") {
-      return `<button class="btn btn-secondary" data-target-status="previewing">Enter Preview</button>`;
+      return `
+        ${launchPreviewBtn}
+        <button class="btn btn-primary" id="btn-action-verify">⚡ Verify with Playwright</button>
+      `;
     }
     if (patch.status === "previewing") {
       return `
-        <button class="btn btn-success" data-target-status="verified">Run Automated Verify (Pass)</button>
-        <button class="btn btn-danger" data-target-status="verification_failed">Simulate Verification Failure</button>
+        ${launchPreviewBtn}
+        <button class="btn btn-primary" id="btn-action-verify">⚡ Re-run Verification</button>
       `;
     }
     if (patch.status === "verified") {
-      return `<button class="btn btn-primary" id="publish-verified-btn">Publish to Release</button>`;
+      return `
+        ${launchPreviewBtn}
+        <button class="btn btn-success" id="btn-publish-verified">🚀 Publish to Release</button>
+      `;
     }
-    return "";
+    if (patch.status === "verification_failed") {
+      return `
+        ${launchPreviewBtn}
+        <button class="btn btn-primary" id="btn-action-verify">🔄 Retry Verification</button>
+      `;
+    }
+    return launchPreviewBtn;
   }
 
   // Transition Status

@@ -1,9 +1,16 @@
 {
   "name": "@patchwork/verification",
   "version": "0.1.0",
-  "private": true,
-  "description": "PATCHWORK automated verification runner: headless Playwright testing of patches in preview isolation",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
-    "test": "echo \"Verification stub ready for Phase 4\""
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@patchwork/contracts": "*",
+    "playwright": "^1.64.0"
   }
 }
