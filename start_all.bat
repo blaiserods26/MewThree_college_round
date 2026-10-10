@@ -1,16 +1,16 @@
 @echo off
-setlocal enabledelayedexpansion
+setlocal
 title PATCHWORK Platform Launcher
 
 echo ===============================================================================
-echo   PATCHWORK -- DOM Hotfix Engine ^& Governance Platform
+echo   PATCHWORK -- DOM Hotfix Engine and Governance Platform
 echo   One-Click System Launcher (Windows)
 echo ===============================================================================
 echo.
 
 cd /d "%~dp0"
 
-:: 1. Verify Node.js and npm
+REM 1. Verify Node.js and npm
 where node >nul 2>nul
 if %ERRORLEVEL% neq 0 (
     echo [ERROR] Node.js was not found in your PATH.
@@ -28,7 +28,7 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 
-:: 2. Ensure .env exists
+REM 2. Ensure .env exists
 if not exist "%~dp0.env" (
     echo [*] .env file not found. Creating .env from .env.example...
     copy "%~dp0.env.example" "%~dp0.env" >nul
@@ -37,9 +37,9 @@ if not exist "%~dp0.env" (
     echo [*] Loaded configuration from .env
 )
 
-:: 3. Verify dependencies
+REM 3. Verify dependencies
 if not exist "%~dp0node_modules" (
-    echo [*] Installing workspace dependencies (npm install)...
+    echo [*] Installing workspace dependencies...
     call npm install
     if %ERRORLEVEL% neq 0 (
         echo [ERROR] Failed to install dependencies.
@@ -48,9 +48,9 @@ if not exist "%~dp0node_modules" (
     )
 )
 
-:: 4. Verify build artifacts
+REM 4. Verify build artifacts
 if not exist "%~dp0packages\server\dist" (
-    echo [*] Compiling TypeScript workspaces (npm run build)...
+    echo [*] Compiling TypeScript workspaces...
     call npm run build
     if %ERRORLEVEL% neq 0 (
         echo [ERROR] Workspace compilation failed.
@@ -61,11 +61,11 @@ if not exist "%~dp0packages\server\dist" (
     echo [*] Compiled build artifacts verified.
 )
 
-:: 5. Seed demo database baseline
-echo [*] Seeding demo database to clean baseline (npm run demo:reset)...
+REM 5. Seed demo database baseline
+echo [*] Seeding demo database to clean baseline...
 call npm run demo:reset
 
-:: 6. Launch the three services in dedicated console windows
+REM 6. Launch the three services in dedicated console windows
 echo.
 echo [*] Launching API Server on http://localhost:4000...
 start "PATCHWORK API Server [Port 4000]" cmd /k "title PATCHWORK API Server [Port 4000] && cd /d "%~dp0" && npm run start --workspace=packages/server"
@@ -76,10 +76,10 @@ start "PATCHWORK Storefront [Port 3000]" cmd /k "title PATCHWORK Storefront [Por
 echo [*] Launching Operator Dashboard on http://localhost:5173...
 start "PATCHWORK Dashboard [Port 5173]" cmd /k "title PATCHWORK Dashboard [Port 5173] && cd /d "%~dp0" && npm run start --workspace=packages/dashboard"
 
-:: 7. Wait briefly for sockets and open browser
+REM 7. Wait briefly for sockets and open browser
 echo.
 echo [*] Waiting 3 seconds for HTTP listeners to initialize...
-timeout /t 3 /nobreak >nul
+ping 127.0.0.1 -n 4 >nul
 
 echo [*] Opening Operator Dashboard in default browser...
 start http://localhost:5173
