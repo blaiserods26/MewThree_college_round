@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AeroStyle Collective — Modern E-Commerce Storefront</title>
+  <link rel="stylesheet" href="styles.css">
+  <!-- PATCHWORK Client Runtime Injection Seam -->
+  <script src="/patchwork.js" data-website-id="demo-store" async></script>
+</head>
+<body>
+  <div id="app" class="storefront-app">
+    <!-- Top Announcement Banner -->
+    <header class="store-header">
+      <div id="promo-banner" class="promo-banner">
+        <span class="badge">SEASON FINALE</span>
+        <span id="promo-banner-text" class="promo-text">Get 20% off all minimalist everyday carry essentials with code PATCHWORK20</span>
+      </div>
+      <div class="nav-bar">
+        <div class="brand-logo">
+          <span class="logo-mark">▲</span>
+          <h1 id="store-headline" class="brand-name">AeroStyle</h1>
+        </div>
+        <div class="nav-controls">
+          <div class="drift-simulation-panel">
+            <span class="simulation-label">Dev Controls:</span>
+            <button id="simulate-drift-btn" class="btn btn-warning" type="button">
+              ⚡ Simulate Site Update (Drift)
+            </button>
+            <button id="reset-storefront-btn" class="btn btn-secondary" type="button">
+              ↺ Reset Baseline
+            </button>
+          </div>
+          <button id="cart-toggle-btn" class="cart-button" type="button">
+            <span>🛒 Cart</span>
+            <span id="cart-count" class="cart-badge">2</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="store-main">
+      <section class="hero-section">
+        <div class="hero-content">
+          <h2 class="hero-title">Precision Gear for the Modern Explorer</h2>
+          <p class="hero-subtitle">Ergonomically engineered apparel and everyday utility carry, crafted for all-day performance.</p>
+        </div>
+      </section>
+
+      <section class="catalog-grid">
+        <!-- Product 1 -->
+        <article class="product-card" id="product-1">
+          <div class="product-image-container">
+            <div class="product-mock-visual bg-mesh-1"></div>
+            <span class="product-tag">Bestseller</span>
+          </div>
+          <div class="product-info">
+            <h3 class="product-title">Nomad Matte Shell Jacket</h3>
+            <p class="product-desc">Weatherproof 3-layer breathable membrane with magnetic cuffs.</p>
+            <div class="product-meta">
+              <span class="product-price">$240.00</span>
+              <button class="btn btn-primary add-to-cart-btn" data-product-id="1" data-price="240">Add to Cart</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- Product 2 -->
+        <article class="product-card" id="product-2">
+          <div class="product-image-container">
+            <div class="product-mock-visual bg-mesh-2"></div>
+            <span class="product-tag">New</span>
+          </div>
+          <div class="product-info">
+            <h3 class="product-title">Carbon Modular Sling Pack</h3>
+            <p class="product-desc">Water-resistant Cordura nylon with quick-release Fidlock magnetic clasp.</p>
+            <div class="product-meta">
+              <span class="product-price">$120.00</span>
+              <button class="btn btn-primary add-to-cart-btn" data-product-id="2" data-price="120">Add to Cart</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- Product 3 -->
+        <article class="product-card" id="product-3">
+          <div class="product-image-container">
+            <div class="product-mock-visual bg-mesh-3"></div>
+            <span class="product-tag">Popular</span>
+          </div>
+          <div class="product-info">
+            <h3 class="product-title">Titanium Kinetic Chrono</h3>
+            <p class="product-desc">Grade 5 titanium casing with sapphire crystal glass and solar movement.</p>
+            <div class="product-meta">
+              <span class="product-price">$380.00</span>
+              <button class="btn btn-primary add-to-cart-btn" data-product-id="3" data-price="380">Add to Cart</button>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- Checkout Summary Drawer / Panel -->
+      <section id="checkout-summary" class="checkout-summary-card">
+        <div class="summary-header">
+          <h3 class="summary-title">Order Summary</h3>
+          <span class="items-count" id="summary-items-count">2 Items selected</span>
+        </div>
+        
+        <div class="summary-breakdown">
+          <div class="summary-line">
+            <span>Subtotal</span>
+            <span id="summary-subtotal">$360.00</span>
+          </div>
+          <div class="summary-line">
+            <span>Standard Shipping</span>
+            <span class="free-shipping">FREE</span>
+          </div>
+          <div class="summary-line summary-total">
+            <span>Estimated Total</span>
+            <span id="cart-total">$360.00</span>
+          </div>
+        </div>
+
+        <div id="checkout-action-container" class="checkout-action-container">
+          <!-- The core demo target element -->
+          <button id="checkout-btn" class="btn btn-checkout" type="button" aria-label="Continue to Checkout">
+            Continue to Checkout →
+          </button>
+        </div>
+
+        <div id="drift-status-banner" class="drift-status-banner hidden">
+          ⚠️ DOM Structure Drifted: Button element modified to <code>#pay-now-action</code> inside <code>div.payment-drawer</code>
+        </div>
+      </section>
+    </main>
+
+    <footer class="store-footer">
+      <p>© 2026 AeroStyle Collective • Target Test Site for PATCHWORK Platform</p>
+    </footer>
+  </div>
+
+  <script src="store.js"></script>
+</body>
+</html>

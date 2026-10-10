@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PATCHWORK — Mission Control Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app" class="dashboard-root">
+    <!-- Top Navigation Bar -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="brand">
+          <div class="brand-glyph">⬡</div>
+          <div class="brand-info">
+            <h1 class="brand-title">PATCHWORK</h1>
+            <span class="brand-tagline">Autonomous DOM Patching & Verification</span>
+          </div>
+        </div>
+        <div class="site-picker-container">
+          <label for="website-select" class="site-picker-label">Target Website</label>
+          <select id="website-select" class="site-select">
+            <option value="demo-store">AeroStyle Storefront (http://localhost:3000)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <div id="connection-status-badge" class="connection-badge connected">
+          <span class="status-dot"></span>
+          <span id="connection-status-text">Engine Online (Port 4000)</span>
+        </div>
+        <button id="create-patch-btn" class="btn btn-primary" type="button">
+          + New Patch Draft
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button id="tab-patches" class="tab-btn active" type="button" data-tab="patches">
+        <span class="tab-icon">📑</span>
+        <span>Patch Explorer</span>
+        <span id="patches-counter-badge" class="count-pill">0</span>
+      </button>
+      <button id="tab-releases" class="tab-btn" type="button" data-tab="releases">
+        <span class="tab-icon">🚀</span>
+        <span>Releases & Rollback</span>
+        <span id="releases-counter-badge" class="count-pill">0</span>
+      </button>
+      <button id="tab-audit" class="tab-btn" type="button" data-tab="audit">
+        <span class="tab-icon">📜</span>
+        <span>Audit Trail</span>
+        <span id="audit-counter-badge" class="count-pill">0</span>
+      </button>
+    </nav>
+
+    <!-- Content Workspace -->
+    <main class="workspace-area">
+      <!-- VIEW 1: PATCH EXPLORER -->
+      <section id="view-patches" class="view-panel active">
+        <div class="split-pane">
+          <!-- Left: Patch List -->
+          <div class="pane-sidebar">
+            <div class="sidebar-filter-bar">
+              <input id="patch-search-input" class="search-input" type="text" placeholder="Filter patches by name or selector..." />
+              <select id="filter-status-select" class="filter-select">
+                <option value="">All Statuses</option>
+                <option value="draft">Draft</option>
+                <option value="previewing">Previewing</option>
+                <option value="verified">Verified</option>
+                <option value="published">Published</option>
+                <option value="verification_failed">Verification Failed</option>
+                <option value="stale">Stale</option>
+                <option value="conflict">Conflict</option>
+                <option value="rolled_back">Rolled Back</option>
+              </select>
+            </div>
+
+            <div id="patch-list-container" class="patch-list-scroll">
+              <div class="empty-state">Loading patches...</div>
+            </div>
+          </div>
+
+          <!-- Right: Patch Details -->
+          <div class="pane-detail">
+            <div id="patch-detail-container" class="detail-wrapper">
+              <div class="empty-detail-placeholder">
+                <span class="placeholder-icon">👈</span>
+                <p>Select a patch from the list to inspect its target fingerprint, operation, and version history.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 2: RELEASES & ROLLBACK -->
+      <section id="view-releases" class="view-panel">
+        <div class="releases-container">
+          <div class="active-release-banner" id="active-release-card">
+            <div class="active-release-info">
+              <div class="banner-tag">ACTIVE PRODUCTION DEPLOYMENT</div>
+              <h2 id="active-rel-version" class="active-version-title">Release V1</h2>
+              <p id="active-rel-timestamp" class="active-rel-meta">Activated just now</p>
+              <div id="active-rel-patches-list" class="active-patches-chips">
+                <!-- Patch tags injected here -->
+              </div>
+            </div>
+            <div class="active-release-actions">
+              <button id="trigger-rollback-btn" class="btn btn-danger" type="button">
+                ⚡ Rollback to Previous Release
+              </button>
+            </div>
+          </div>
+
+          <div class="releases-history-section">
+            <h3 class="section-heading">Deployment Release History</h3>
+            <div id="releases-history-list" class="releases-table-container">
+              <!-- Injected dynamically -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 3: AUDIT TRAIL -->
+      <section id="view-audit" class="view-panel">
+        <div class="audit-container">
+          <div class="audit-header">
+            <h3 class="section-heading">Immutable System Audit Log</h3>
+            <p class="section-subtext">Every patch authoring action, verification transition, release deployment, and rollback is cryptographically recorded.</p>
+          </div>
+          <div id="audit-timeline-list" class="timeline-container">
+            <!-- Audit cards injected dynamically -->
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Create Patch Modal -->
+    <div id="new-patch-modal" class="modal-backdrop hidden">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3 class="modal-title">Create New Patch Draft</h3>
+          <button id="close-modal-btn" class="modal-close" type="button">×</button>
+        </div>
+        <form id="new-patch-form" class="modal-form">
+          <div class="form-group">
+            <label for="patch-name-input">Patch Name</label>
+            <input id="patch-name-input" type="text" required placeholder="e.g. Restore mobile checkout button visibility" />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="patch-selector-input">Target CSS Selector</label>
+              <input id="patch-selector-input" type="text" required value="#checkout-btn" />
+            </div>
+            <div class="form-group">
+              <label for="patch-tag-input">Target Tag Name</label>
+              <input id="patch-tag-input" type="text" required value="button" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="patch-op-type-select">Operation Type</label>
+            <select id="patch-op-type-select">
+              <option value="style.set">style.set (CSS Property)</option>
+              <option value="text.set">text.set (Element Text)</option>
+              <option value="attribute.set">attribute.set (DOM Attribute)</option>
+              <option value="element.show">element.show (Make Visible)</option>
+              <option value="element.hide">element.hide (Hide Element)</option>
+            </select>
+          </div>
+
+          <div id="style-op-fields" class="form-row">
+            <div class="form-group">
+              <label for="patch-op-prop-input">CSS Property</label>
+              <input id="patch-op-prop-input" type="text" value="display" />
+            </div>
+            <div class="form-group">
+              <label for="patch-op-val-input">CSS Value</label>
+              <input id="patch-op-val-input" type="text" value="inline-flex" />
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button id="cancel-new-patch-btn" class="btn btn-secondary" type="button">Cancel</button>
+            <button id="submit-new-patch-btn" class="btn btn-primary" type="submit">Create Draft Patch</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-stack"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

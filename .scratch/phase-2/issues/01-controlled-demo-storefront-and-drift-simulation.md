@@ -6,9 +6,9 @@
 
 **Status:** ready-for-agent
 
-- [ ] Build a responsive storefront page featuring an editable promo banner and headline.
-- [ ] Implement an interactive shopping cart with items and a summary panel (`#checkout-summary`).
-- [ ] Include `#checkout-btn` with a baseline mobile viewport regression (`display: none` at <= 480px width).
-- [ ] Add an interactive "Simulate Site Update" toggle that renames the button to `#pay-now-action` and wraps it in `div.payment-drawer`.
-- [ ] Provide an instant "Reset to Baseline" action to return the DOM to its initial state.
-- [ ] Include the runtime injection seam tag `<script src="/patchwork.js" data-website-id="demo-store"></script>`.
+- [x] Build a responsive storefront page featuring an editable promo banner and headline.
+- [x] Implement an interactive shopping cart with items and a summary panel (`#checkout-summary`).
+- [x] Include `#checkout-btn` with a baseline mobile viewport regression (`display: none` at <= 480px width).
+- [x] Add an interactive "Simulate Site Update" toggle that renames the button to `#pay-now-action` and wraps it in `div.payment-drawer`.
+- [x] Provide an instant "Reset to Baseline" action to return the DOM to its initial state.
+- [x] Include the runtime injection seam tag `<script src="/patchwork.js" data-website-id="demo-store"></script>`.

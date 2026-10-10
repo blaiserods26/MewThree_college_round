@@ -6,11 +6,11 @@
 
 **Status:** ready-for-agent
 
-- [ ] Implement `POST /api/patches` to create a new draft patch with request schema validation.
-- [ ] Implement `GET /api/patches` and `GET /api/patches/:id` with optional website and status filters.
-- [ ] Implement `PUT /api/patches/:id` to update draft patch operations and generate new versions.
-- [ ] Implement `POST /api/patches/:id/transition` to validate and execute patch lifecycle status transitions.
-- [ ] Implement `GET /api/websites/:id/active-release` to deliver the active release bundle to the runtime script.
-- [ ] Implement `POST /api/websites/:id/rollback` to trigger atomic release rollback.
-- [ ] Implement `GET /api/audit-events` returning chronological immutable audit history.
-- [ ] Add automated integration tests verifying API endpoint responses, status codes, and error payloads.
+- [x] Implement `POST /api/patches` to create a new draft patch with request schema validation.
+- [x] Implement `GET /api/patches` and `GET /api/patches/:id` with optional website and status filters.
+- [x] Implement `PUT /api/patches/:id` to update draft patch operations and generate new versions.
+- [x] Implement `POST /api/patches/:id/transition` to validate and execute patch lifecycle status transitions.
+- [x] Implement `GET /api/websites/:id/active-release` to deliver the active release bundle to the runtime script.
+- [x] Implement `POST /api/websites/:id/rollback` to trigger atomic release rollback.
+- [x] Implement `GET /api/audit-events` returning chronological immutable audit history.
+- [x] Add automated integration tests verifying API endpoint responses, status codes, and error payloads.

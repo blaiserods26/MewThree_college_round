@@ -6,8 +6,8 @@
 
 **Status:** ready-for-agent
 
-- [ ] Build the Releases panel listing current active release, past superseded releases, and rolled-back releases.
-- [ ] Implement an interactive "Rollback to Prior Release" button that calls `POST /api/websites/:id/rollback`.
-- [ ] Display immediate confirmation toast and updated release/patch statuses upon rollback.
-- [ ] Build the Audit Trail timeline view displaying actor, action, timestamp, and metadata diffs.
-- [ ] Add end-to-end integration test verifying that triggering rollback updates the UI and generates audit records.
+- [x] Build the Releases panel listing current active release, past superseded releases, and rolled-back releases.
+- [x] Implement an interactive "Rollback to Prior Release" button that calls `POST /api/websites/:id/rollback`.
+- [x] Display immediate confirmation toast and updated release/patch statuses upon rollback.
+- [x] Build the Audit Trail timeline view displaying actor, action, timestamp, and metadata diffs.
+- [x] Add end-to-end integration test verifying that triggering rollback updates the UI and generates audit records.

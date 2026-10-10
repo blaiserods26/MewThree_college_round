@@ -77,7 +77,7 @@ export function validatePatchTransition(
  * Checks whether an entire patch entity meets all gating conditions to be published.
  */
 export function canPublishPatch(patch: Patch): boolean {
-  return patch.status === "verified";
+  return patch.status === "verified" || patch.status === "published";
 }
 
 /**

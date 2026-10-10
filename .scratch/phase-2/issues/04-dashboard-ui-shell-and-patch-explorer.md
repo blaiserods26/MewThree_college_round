@@ -6,8 +6,8 @@
 
 **Status:** ready-for-agent
 
-- [ ] Create the dashboard application shell with website switcher and navigation layout.
-- [ ] Build the Patch Inventory list showing name, status badge, version counter, and last updated time.
-- [ ] Build the Patch Detail view showing target selector, attributes, operation details, and version history.
-- [ ] Implement a "New Patch" modal/drawer to submit draft patches to `POST /api/patches`.
-- [ ] Connect the UI to the live backend API with optimistic loading states and error handling.
+- [x] Create the dashboard application shell with website switcher and navigation layout.
+- [x] Build the Patch Inventory list showing name, status badge, version counter, and last updated time.
+- [x] Build the Patch Detail view showing target selector, attributes, operation details, and version history.
+- [x] Implement a "New Patch" modal/drawer to submit draft patches to `POST /api/patches`.
+- [x] Connect the UI to the live backend API with optimistic loading states and error handling.

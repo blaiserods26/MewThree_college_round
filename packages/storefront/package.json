@@ -1,9 +1,11 @@
 {
   "name": "@patchwork/storefront",
   "version": "0.1.0",
+  "type": "module",
   "private": true,
   "description": "PATCHWORK demo storefront: controlled host target website with baseline and drifted layouts",
   "scripts": {
-    "dev": "echo \"Storefront stub ready for Phase 2\""
+    "dev": "node server.js",
+    "start": "node server.js"
   }
 }

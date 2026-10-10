@@ -6,9 +6,9 @@
 
 **Status:** ready-for-agent
 
-- [ ] Implement file-based or embedded persistent repository for `Website`, `Patch`, `Release`, and `AuditEvent`.
-- [ ] Implement `createPatch` generating a new patch in `draft` status (version 1) and recording an audit event.
-- [ ] Implement `updatePatchDraft` which creates an immutable `PatchVersion` record and increments the version counter without overwriting history.
-- [ ] Implement `transitionPatchStatus` validating transitions against `@patchwork/contracts` and rejecting illegal transitions.
-- [ ] Implement `createRelease` and atomic rollback execution using the contracts rollback helper.
-- [ ] Add unit tests verifying persistence across restarts, version bumping, transition rejection, and audit log accuracy.
+- [x] Implement file-based or embedded persistent repository for `Website`, `Patch`, `Release`, and `AuditEvent`.
+- [x] Implement `createPatch` generating a new patch in `draft` status (version 1) and recording an audit event.
+- [x] Implement `updatePatchDraft` which creates an immutable `PatchVersion` record and increments the version counter without overwriting history.
+- [x] Implement `transitionPatchStatus` validating transitions against `@patchwork/contracts` and rejecting illegal transitions.
+- [x] Implement `createRelease` and atomic rollback execution using the contracts rollback helper.
+- [x] Add unit tests verifying persistence across restarts, version bumping, transition rejection, and audit log accuracy.

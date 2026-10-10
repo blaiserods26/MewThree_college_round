@@ -1,0 +1,184 @@
+import http from "node:http";
+import type { PatchService } from "./service.js";
+
+function sendJson(res: http.ServerResponse, status: number, body: unknown) {
+  res.writeHead(status, {
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Cache-Control": "no-store, private",
+  });
+  res.end(JSON.stringify(body));
+}
+
+function parseJsonBody(req: http.IncomingMessage): Promise<any> {
+  return new Promise((resolve, reject) => {
+    let raw = "";
+    req.on("data", (chunk: Buffer | string) => {
+      raw += chunk.toString();
+    });
+    req.on("end", () => {
+      if (!raw.trim()) {
+        resolve({});
+        return;
+      }
+      try {
+        resolve(JSON.parse(raw));
+      } catch (err) {
+        reject(new Error("Invalid JSON body"));
+      }
+    });
+    req.on("error", reject);
+  });
+}
+
+export function createServer(service: PatchService): http.Server {
+  return http.createServer(async (req, res) => {
+    // Handle CORS preflight
+    if (req.method === "OPTIONS") {
+      res.writeHead(204, {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      });
+      res.end();
+      return;
+    }
+
+    const parsedUrl = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+    const pathname = parsedUrl.pathname;
+    const method = req.method || "GET";
+
+    try {
+      // 1. Websites Endpoints
+      if (pathname === "/api/websites" && method === "GET") {
+        return sendJson(res, 200, service.listWebsites());
+      }
+
+      const websiteMatch = pathname.match(/^\/api\/websites\/([^/]+)$/);
+      if (websiteMatch && method === "GET") {
+        const site = service.getWebsite(websiteMatch[1]);
+        if (!site) return sendJson(res, 404, { error: "Website not found" });
+        return sendJson(res, 200, site);
+      }
+
+      // Active Release endpoint for runtime injection
+      const activeRelMatch = pathname.match(/^\/api\/websites\/([^/]+)\/active-release$/);
+      if (activeRelMatch && method === "GET") {
+        const websiteId = activeRelMatch[1];
+        const release = service.getActiveRelease(websiteId);
+        let patches: unknown[] = [];
+        if (release && release.patchIds.length > 0) {
+          patches = release.patchIds
+            .map((id) => service.getPatch(id))
+            .filter((p) => p !== undefined);
+        }
+        return sendJson(res, 200, { release: release || null, patches });
+      }
+
+      // Create Release endpoint
+      const createRelMatch = pathname.match(/^\/api\/websites\/([^/]+)\/releases$/);
+      if (createRelMatch && method === "POST") {
+        const websiteId = createRelMatch[1];
+        const body = await parseJsonBody(req);
+        const release = service.createRelease({
+          websiteId,
+          patchIds: body.patchIds || [],
+          actor: body.actor || { id: "anonymous", name: "Anonymous", role: "developer" },
+          changeSummary: body.changeSummary,
+        });
+        return sendJson(res, 201, release);
+      }
+
+      // Rollback endpoint
+      const rollbackMatch = pathname.match(/^\/api\/websites\/([^/]+)\/rollback$/);
+      if (rollbackMatch && method === "POST") {
+        const websiteId = rollbackMatch[1];
+        const body = await parseJsonBody(req);
+        const result = service.rollbackRelease(
+          websiteId,
+          body.actor || { id: "anonymous", name: "Anonymous", role: "developer" },
+          body.reason
+        );
+        return sendJson(res, 200, result);
+      }
+
+      // 2. Patches Endpoints
+      if (pathname === "/api/patches" && method === "GET") {
+        const websiteId = parsedUrl.searchParams.get("websiteId") || undefined;
+        const status = (parsedUrl.searchParams.get("status") as any) || undefined;
+        return sendJson(res, 200, service.listPatches({ websiteId, status }));
+      }
+
+      if (pathname === "/api/patches" && method === "POST") {
+        const body = await parseJsonBody(req);
+        if (!body.websiteId || !body.name || !body.targetFingerprint || !body.operation) {
+          return sendJson(res, 400, {
+            error: "websiteId, name, targetFingerprint, and operation are required.",
+          });
+        }
+        const patch = service.createPatch({
+          websiteId: body.websiteId,
+          name: body.name,
+          targetFingerprint: body.targetFingerprint,
+          operation: body.operation,
+          actor: body.actor || { id: "anonymous", name: "Anonymous", role: "developer" },
+        });
+        return sendJson(res, 201, patch);
+      }
+
+      // Patch Detail
+      const patchDetailMatch = pathname.match(/^\/api\/patches\/([^/]+)$/);
+      if (patchDetailMatch && method === "GET") {
+        const patch = service.getPatch(patchDetailMatch[1]);
+        if (!patch) return sendJson(res, 404, { error: "Patch not found" });
+        return sendJson(res, 200, patch);
+      }
+
+      // Update Patch Draft
+      if (patchDetailMatch && method === "PUT") {
+        const body = await parseJsonBody(req);
+        const updated = service.updatePatchDraft(patchDetailMatch[1], {
+          targetFingerprint: body.targetFingerprint,
+          operation: body.operation,
+          changeNote: body.changeNote,
+          actor: body.actor || { id: "anonymous", name: "Anonymous", role: "developer" },
+        });
+        return sendJson(res, 200, updated);
+      }
+
+      // Transition Patch Status
+      const transitionMatch = pathname.match(/^\/api\/patches\/([^/]+)\/transition$/);
+      if (transitionMatch && method === "POST") {
+        const body = await parseJsonBody(req);
+        if (!body.targetStatus) {
+          return sendJson(res, 400, { error: "targetStatus is required." });
+        }
+        const updated = service.transitionPatchStatus(
+          transitionMatch[1],
+          body.targetStatus,
+          body.actor || { id: "anonymous", name: "Anonymous", role: "developer" },
+          body.reason
+        );
+        return sendJson(res, 200, updated);
+      }
+
+      // 3. Audit Events Endpoints
+      if (pathname === "/api/audit-events" && method === "GET") {
+        const websiteId = parsedUrl.searchParams.get("websiteId") || undefined;
+        return sendJson(res, 200, service.listAuditEvents(websiteId));
+      }
+
+      // 4. Releases Endpoint
+      if (pathname === "/api/releases" && method === "GET") {
+        const websiteId = parsedUrl.searchParams.get("websiteId") || undefined;
+        return sendJson(res, 200, service.listReleases(websiteId));
+      }
+
+      return sendJson(res, 404, { error: "Endpoint not found" });
+    } catch (err: any) {
+      return sendJson(res, 400, { error: err.message || "An error occurred" });
+    }
+  });
+}
