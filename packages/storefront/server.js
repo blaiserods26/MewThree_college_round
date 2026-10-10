@@ -6,6 +6,25 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+function loadEnv() {
+  if (typeof process.loadEnvFile !== "function") return;
+  const candidates = [
+    path.resolve(process.cwd(), ".env"),
+    path.resolve(__dirname, "../../.env"),
+    path.resolve(__dirname, "../.env"),
+    path.resolve(__dirname, ".env"),
+  ];
+  for (const envFile of candidates) {
+    if (fs.existsSync(envFile)) {
+      try {
+        process.loadEnvFile(envFile);
+        break;
+      } catch {}
+    }
+  }
+}
+loadEnv();
+
 const PORT = Number(process.env.STOREFRONT_PORT) || 3000;
 
 const MIME_TYPES = {

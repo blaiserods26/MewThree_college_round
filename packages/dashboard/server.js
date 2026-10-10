@@ -6,6 +6,25 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+function loadEnv() {
+  if (typeof process.loadEnvFile !== "function") return;
+  const candidates = [
+    path.resolve(process.cwd(), ".env"),
+    path.resolve(__dirname, "../../.env"),
+    path.resolve(__dirname, "../.env"),
+    path.resolve(__dirname, ".env"),
+  ];
+  for (const envFile of candidates) {
+    if (fs.existsSync(envFile)) {
+      try {
+        process.loadEnvFile(envFile);
+        break;
+      } catch {}
+    }
+  }
+}
+loadEnv();
+
 const PORT = Number(process.env.DASHBOARD_PORT || process.env.PORT) || 5173;
 const API_BASE = process.env.PATCHWORK_API_BASE || "http://localhost:4000/api";
 const STOREFRONT_URL = process.env.STOREFRONT_URL || "http://localhost:3000";

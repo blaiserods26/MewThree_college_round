@@ -1,0 +1,4 @@
+# @patchwork/storefront gitignore
+node_modules/
+dist/
+*.log

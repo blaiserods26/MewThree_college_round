@@ -10,7 +10,11 @@
     "test": "bun test",
     "typecheck": "npm run typecheck --workspace=packages/contracts && npm run build --workspace=packages/contracts && npm run typecheck --workspace=packages/verification && npm run build --workspace=packages/verification && npm run typecheck --workspace=packages/server && npm run typecheck --workspace=packages/runtime",
     "build": "npm run build --workspace=packages/contracts && npm run build --workspace=packages/verification && npm run build --workspace=packages/server && npm run build --workspace=packages/runtime",
-    "demo:reset": "npm run reset --workspace=packages/server"
+    "demo:reset": "npm run reset --workspace=packages/server",
+    "start": "start_all.bat",
+    "start:server": "npm run start --workspace=packages/server",
+    "start:storefront": "npm run start --workspace=packages/storefront",
+    "start:dashboard": "npm run start --workspace=packages/dashboard"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",

@@ -75,8 +75,19 @@ npm test             # runs complete test suite (114+ tests passing)
 ```
 
 ### 2. Launch Local Environment
-Run the three processes (each in its own terminal):
 
+#### Option A: One-Click Windows Launcher (Recommended)
+Simply double-click `start_all.bat` or run:
+```cmd
+start_all.bat
+```
+This automatically verifies prerequisites, compiles packages if needed, seeds the demo baseline, launches all three services in dedicated console windows, and opens the Operator Dashboard in your browser.
+To cleanly terminate all running services at once, run:
+```cmd
+stop_all.bat
+```
+
+#### Option B: Multi-Terminal Manual Startup
 ```bash
 # Terminal 1: Backend API Engine (Port 4000)
 npm run start --workspace=packages/server
@@ -89,8 +100,9 @@ npm run start --workspace=packages/dashboard
 ```
 
 Open your browser to:
-- **Dashboard:** [http://localhost:5173](http://localhost:5173)
+- **Operator Dashboard:** [http://localhost:5173](http://localhost:5173)
 - **Live Storefront:** [http://localhost:3000](http://localhost:3000)
+- **API Health Check:** [http://localhost:4000/api/health](http://localhost:4000/api/health)
 
 ---
 

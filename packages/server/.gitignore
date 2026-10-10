@@ -1,0 +1,7 @@
+# @patchwork/server gitignore
+node_modules/
+dist/
+data/
+test/test-*.json
+*.corrupt-*
+*.log

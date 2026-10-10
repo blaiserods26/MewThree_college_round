@@ -1,7 +1,31 @@
+import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { JsonFileStore } from "./store.js";
 import { PatchService } from "./service.js";
 import { createServer } from "./api.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+function loadEnv(): void {
+  if (typeof (process as any).loadEnvFile !== "function") return;
+  const candidates = [
+    path.resolve(process.cwd(), ".env"),
+    path.resolve(__dirname, "../../.env"),
+    path.resolve(__dirname, "../.env"),
+    path.resolve(__dirname, ".env"),
+  ];
+  for (const envFile of candidates) {
+    if (fs.existsSync(envFile)) {
+      try {
+        (process as any).loadEnvFile(envFile);
+        break;
+      } catch {}
+    }
+  }
+}
+loadEnv();
 
 export * from "./store.js";
 export * from "./service.js";
