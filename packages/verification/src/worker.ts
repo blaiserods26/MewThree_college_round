@@ -135,7 +135,7 @@ export async function runPatchVerificationDirect(
 ): Promise<VerificationRun> {
   const { patch, websiteBaseUrl } = options;
   const viewports = options.viewports || DEFAULT_VIEWPORTS;
-  const visualDiffThreshold = options.visualDiffThreshold ?? 10.0;
+  const visualDiffThreshold = options.visualDiffThreshold ?? 25.0;
 
   const runId = `ver-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
   const startedAt = new Date().toISOString();

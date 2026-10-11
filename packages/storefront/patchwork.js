@@ -316,16 +316,79 @@ function generateElementSelector(element) {
   if (element.id) {
     return `#${element.id}`;
   }
+  const doc = element.ownerDocument || (typeof document !== "undefined" ? document : null);
   const tag = element.tagName.toLowerCase();
+  const isUnique = (sel) => {
+    if (!doc) return false;
+    try {
+      return doc.querySelectorAll(sel).length === 1;
+    } catch {
+      return false;
+    }
+  };
   const parent = element.parentElement;
   if (parent && parent.id) {
-    return `#${parent.id} > ${tag}`;
+    const candidate = `#${parent.id} > ${tag}`;
+    if (isUnique(candidate)) return candidate;
   }
   if (element.className && typeof element.className === "string") {
     const classes = element.className.trim().split(/\s+/).filter((c) => c && !c.startsWith("patchwork-"));
     if (classes.length > 0) {
-      return `${tag}.${classes[0]}`;
+      const classSelector = `${tag}.${classes.join(".")}`;
+      if (isUnique(classSelector)) return classSelector;
+      const singleClass = `${tag}.${classes[0]}`;
+      if (isUnique(singleClass)) return singleClass;
     }
+  }
+  if (parent) {
+    const parentTag = parent.tagName.toLowerCase();
+    const parentClasses = parent.className && typeof parent.className === "string" ? parent.className.trim().split(/\s+/).filter((c) => c && !c.startsWith("patchwork-")) : [];
+    let targetPart = tag;
+    if (element.className && typeof element.className === "string") {
+      const cls = element.className.trim().split(/\s+/).filter((c) => c && !c.startsWith("patchwork-"))[0];
+      if (cls) targetPart = `${tag}.${cls}`;
+    }
+    if (parentClasses.length > 0) {
+      const candidate = `.${parentClasses[0]} ${targetPart}`;
+      if (isUnique(candidate)) return candidate;
+    }
+    const candidateTag = `${parentTag} ${targetPart}`;
+    if (isUnique(candidateTag)) return candidateTag;
+    const candidateChild = `${parentTag} > ${targetPart}`;
+    if (isUnique(candidateChild)) return candidateChild;
+  }
+  for (const attr of ["data-testid", "data-action", "name", "aria-label"]) {
+    const val = element.getAttribute(attr);
+    if (val) {
+      const candidate = `${tag}[${attr}="${val}"]`;
+      if (isUnique(candidate)) return candidate;
+    }
+  }
+  let cur = element;
+  const pathParts = [];
+  while (cur && cur.nodeType === 1 && cur.tagName.toLowerCase() !== "html" && cur.tagName.toLowerCase() !== "body") {
+    let part = cur.tagName.toLowerCase();
+    if (cur.id) {
+      pathParts.unshift(`#${cur.id}`);
+      break;
+    }
+    const curParent = cur.parentElement;
+    if (curParent) {
+      const sameTagSiblings = Array.from(curParent.children).filter((c) => c.tagName === cur.tagName);
+      if (sameTagSiblings.length > 1) {
+        const index = sameTagSiblings.indexOf(cur) + 1;
+        part += `:nth-of-type(${index})`;
+      }
+    }
+    pathParts.unshift(part);
+    const candidatePath = pathParts.join(" > ");
+    if (isUnique(candidatePath)) {
+      return candidatePath;
+    }
+    cur = cur.parentElement;
+  }
+  if (pathParts.length > 0) {
+    return pathParts.join(" > ");
   }
   return tag;
 }

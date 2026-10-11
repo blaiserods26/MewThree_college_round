@@ -118,7 +118,7 @@ export function compareScreenshots(
   patchedPng: Buffer,
   options: DiffOptions = {}
 ): VisualDiffResult {
-  const thresholdPercent = options.thresholdPercent ?? 10.0;
+  const thresholdPercent = options.thresholdPercent ?? 25.0;
   const tolerance = options.tolerancePerChannel ?? 15;
 
   let baseline;

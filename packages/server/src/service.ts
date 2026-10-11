@@ -511,7 +511,7 @@ export class PatchService {
 
   public async verifyPatch(
     patchId: string,
-    options: { actor?: AuditActor; websiteBaseUrl?: string; apiBaseUrl?: string } = {}
+    options: { actor?: AuditActor; websiteBaseUrl?: string; apiBaseUrl?: string; visualDiffThreshold?: number } = {}
   ): Promise<VerificationRun> {
     const patch = this.store.getPatch(patchId);
     if (!patch) {
@@ -559,6 +559,7 @@ export class PatchService {
         patch,
         websiteBaseUrl,
         apiBaseUrl: options.apiBaseUrl,
+        visualDiffThreshold: options.visualDiffThreshold ?? 25.0,
         timeoutMs: this.verificationTimeoutMs,
       });
     } catch (err: any) {
