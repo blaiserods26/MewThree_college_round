@@ -198,6 +198,7 @@ export type AuditAction =
   | "verification.failed"
   | "release.published"
   | "release.rolled_back"
+  | "release.reconciled"
   | "health.checked";
 
 export interface AuditActor {

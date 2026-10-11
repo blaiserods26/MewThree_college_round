@@ -23,6 +23,7 @@ import { NewPatchModal } from './dialogs/NewPatchModal';
 import { AiHotfixModal } from './dialogs/AiHotfixModal';
 import { ConfirmDialog } from './dialogs/ConfirmDialog';
 import { CreateReleaseModal } from './dialogs/CreateReleaseModal';
+import { BackportPrModal } from './dialogs/BackportPrModal';
 
 export const MainApp: React.FC = () => {
   const { showToast } = useToast();
@@ -44,6 +45,7 @@ export const MainApp: React.FC = () => {
   const [isCommandMenuOpen, setIsCommandMenuOpen] = useState(false);
   const [isRollbackOpen, setIsRollbackOpen] = useState(false);
   const [isCreateReleaseOpen, setIsCreateReleaseOpen] = useState(false);
+  const [backportRelease, setBackportRelease] = useState<Release | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -154,6 +156,7 @@ export const MainApp: React.FC = () => {
             onRefresh={loadData}
             onOpenConfirmRollback={() => setIsRollbackOpen(true)}
             onOpenCreateRelease={() => setIsCreateReleaseOpen(true)}
+            onOpenBackport={(rel) => setBackportRelease(rel)}
           />
         )}
 
@@ -200,6 +203,12 @@ export const MainApp: React.FC = () => {
           loadData();
           setActiveTab('releases');
         }}
+      />
+
+      <BackportPrModal
+        isOpen={Boolean(backportRelease)}
+        onClose={() => setBackportRelease(null)}
+        release={backportRelease}
       />
 
       <ConfirmDialog

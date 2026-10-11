@@ -1,0 +1,36 @@
+name: PATCHWORK Monorepo CI Quality Gate
+
+on:
+  push:
+    branches: [main, daksh]
+  pull_request:
+    branches: [main, daksh]
+
+jobs:
+  verify:
+    name: Typecheck & Build Integrity
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci || npm install
+
+      - name: Typecheck Contracts, Verification, Server, Runtime, and Dashboard
+        run: npm run typecheck
+
+      - name: Build All Workspaces
+        run: |
+          npm run build --workspace=packages/contracts
+          npm run build --workspace=packages/verification
+          npm run build --workspace=packages/server
+          npm run build --workspace=packages/runtime
+          npm run build --workspace=packages/dashboard

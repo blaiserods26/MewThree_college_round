@@ -366,6 +366,20 @@ export function createServer(service: PatchService, options: ApiServerOptions = 
         return sendJson(res, 201, release);
       }
 
+      const backportRelMatch = pathname.match(/^\/api\/(?:websites\/[^/]+\/)?releases\/([^/]+)\/backport-pr$/);
+      if (backportRelMatch && method === "POST") {
+        const releaseId = backportRelMatch[1];
+        const body = await parseJsonBody(req).catch(() => ({}));
+        const result = service.exportReleaseToPr(releaseId, {
+          repoOwner: body.repoOwner,
+          repoName: body.repoName,
+          baseBranch: body.baseBranch,
+          targetBranch: body.targetBranch,
+          actor: body.actor || { id: "anonymous", name: "Anonymous", role: "developer" },
+        });
+        return sendJson(res, 200, result);
+      }
+
       // 5. AI Endpoints (Phase 8)
       if (pathname === "/api/ai/generate-patch" && method === "POST") {
         const body = await parseJsonBody(req);

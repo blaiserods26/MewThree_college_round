@@ -112,6 +112,26 @@ export interface Release {
   bundleChecksum?: string;
 }
 
+export interface BackportPrResult {
+  releaseId: string;
+  version: number;
+  branchName: string;
+  prTitle: string;
+  prBody: string;
+  patchDiff: string;
+  filesModified: string[];
+  evidenceSummary: {
+    patchCount: number;
+    patches: Array<{
+      id: string;
+      name: string;
+      selector: string;
+      operationType: string;
+      details: string;
+    }>;
+  };
+}
+
 export interface ReleaseHealthCheckResult {
   status: 'healthy' | 'degraded' | 'target_missing' | 'unapplied' | 'baseline' | 'failed';
   overallStatus?: 'healthy' | 'degraded' | 'failed' | 'baseline';

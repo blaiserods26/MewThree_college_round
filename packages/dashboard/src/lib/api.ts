@@ -3,6 +3,7 @@ import type {
   PatchEvidenceRecord,
   VerificationRun,
   Release,
+  BackportPrResult,
   ReleaseHealthCheckResult,
   AuditEvent,
   ConflictRecord,
@@ -165,6 +166,13 @@ export const api = {
     return request<Release>(`/websites/${websiteId}/releases`, {
       method: 'POST',
       body: JSON.stringify(data),
+    });
+  },
+
+  async exportReleaseToPr(releaseId: string, actor = 'operator'): Promise<BackportPrResult> {
+    return request<BackportPrResult>(`/releases/${releaseId}/backport-pr`, {
+      method: 'POST',
+      body: JSON.stringify({ actor }),
     });
   },
 

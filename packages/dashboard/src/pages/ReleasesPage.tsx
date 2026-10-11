@@ -12,6 +12,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import type { Release, Patch } from '../types';
+import { GitPullRequest } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToast } from '../components/Notifications';
 
@@ -22,6 +23,7 @@ interface ReleasesPageProps {
   onRefresh: () => void;
   onOpenConfirmRollback: () => void;
   onOpenCreateRelease: () => void;
+  onOpenBackport: (release: Release) => void;
 }
 
 export const ReleasesPage: React.FC<ReleasesPageProps> = ({
@@ -31,6 +33,7 @@ export const ReleasesPage: React.FC<ReleasesPageProps> = ({
   onRefresh,
   onOpenConfirmRollback,
   onOpenCreateRelease,
+  onOpenBackport,
 }) => {
   const { showToast } = useToast();
 
@@ -107,7 +110,17 @@ export const ReleasesPage: React.FC<ReleasesPageProps> = ({
             </div>
           </div>
 
-          <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              className="pw-btn pw-btn-secondary"
+              onClick={() => activeRelease && onOpenBackport(activeRelease)}
+              disabled={!activeRelease}
+              title={!activeRelease ? 'No active release to reconcile' : 'Backport hotfix bundle to Git Pull Request'}
+            >
+              <GitPullRequest size={14} color="var(--pw-accent)" />
+              <span>Reconcile to Git PR</span>
+            </button>
+
             <button
               className="pw-btn pw-btn-danger"
               onClick={onOpenConfirmRollback}
@@ -180,10 +193,19 @@ export const ReleasesPage: React.FC<ReleasesPageProps> = ({
                       </span>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '12px', color: 'var(--pw-text-muted)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '12px', color: 'var(--pw-text-muted)' }}>
                       <span style={{ fontFamily: 'var(--font-mono)' }}>{rel.id}</span>
                       <span>{new Date(rel.createdAt).toLocaleString()}</span>
-                      <span style={{ color: 'var(--pw-text-subtle)' }}>by {rel.createdBy}</span>
+                      <button
+                        type="button"
+                        className="pw-btn pw-btn-secondary pw-btn-sm"
+                        style={{ padding: '4px 10px', fontSize: '11px' }}
+                        onClick={() => onOpenBackport(rel)}
+                        title="Generate backport Pull Request for this release"
+                      >
+                        <GitPullRequest size={12} />
+                        <span>Backport PR</span>
+                      </button>
                     </div>
                   </div>
                 );
