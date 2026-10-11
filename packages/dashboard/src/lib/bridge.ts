@@ -8,11 +8,13 @@ export interface BridgeMessageEvent {
 
 export type ElementSelectedHandler = (fingerprint: TargetFingerprint) => void;
 export type ReadyHandler = () => void;
+export type CancelledHandler = () => void;
 
 class StorefrontBridge {
   private iframe: HTMLIFrameElement | null = null;
   private onElementSelected: ElementSelectedHandler | null = null;
   private onReady: ReadyHandler | null = null;
+  private onCancelled: CancelledHandler | null = null;
   private isConnected = false;
 
   constructor() {
@@ -34,6 +36,10 @@ class StorefrontBridge {
 
   public setReadyHandler(handler: ReadyHandler | null) {
     this.onReady = handler;
+  }
+
+  public setCancelledHandler(handler: CancelledHandler | null) {
+    this.onCancelled = handler;
   }
 
   public getIsConnected() {
@@ -63,13 +69,35 @@ class StorefrontBridge {
       if (this.onElementSelected) {
         this.onElementSelected(fingerprint);
       }
+    } else if (data.type === 'PATCHWORK_INSPECTOR_CANCELLED') {
+      if (this.onCancelled) {
+        this.onCancelled();
+      }
     }
   }
 
+  private getTargetWindow(): Window | null {
+    if (this.iframe && this.iframe.contentWindow) {
+      return this.iframe.contentWindow;
+    }
+    if (typeof document !== 'undefined') {
+      const el = document.getElementById('storefront-preview-iframe') as HTMLIFrameElement | null;
+      if (el && el.contentWindow) {
+        this.iframe = el;
+        return el.contentWindow;
+      }
+    }
+    return null;
+  }
+
   private post(msg: Record<string, unknown>) {
-    if (!this.iframe || !this.iframe.contentWindow) return;
+    const target = this.getTargetWindow();
+    if (!target) {
+      console.warn('[PATCHWORK Bridge] Target storefront iframe not ready to receive messages');
+      return;
+    }
     try {
-      this.iframe.contentWindow.postMessage(msg, '*');
+      target.postMessage(msg, '*');
     } catch (err) {
       console.warn('[PATCHWORK Bridge] PostMessage error:', err);
     }
@@ -79,8 +107,8 @@ class StorefrontBridge {
     this.post({ type: 'PATCHWORK_PING_INSPECTOR' });
   }
 
-  public toggleInspector() {
-    this.post({ type: 'PATCHWORK_TOGGLE_INSPECTOR' });
+  public toggleInspector(enabled?: boolean) {
+    this.post({ type: 'PATCHWORK_TOGGLE_INSPECTOR', enabled });
   }
 
   public applyLivePreview(patch: { operation: PatchOperation; targetFingerprint: TargetFingerprint }) {

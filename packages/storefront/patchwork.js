@@ -370,6 +370,16 @@ function initVisualInspector(options = {}) {
   let activeTooltip = null;
   let isEnabled = false;
   function createOverlayElements() {
+    if (!doc.getElementById("patchwork-inspector-styles") && doc.head) {
+      const style = doc.createElement("style");
+      style.id = "patchwork-inspector-styles";
+      style.textContent = `
+        .patchwork-inspecting, .patchwork-inspecting * {
+          cursor: crosshair !important;
+        }
+      `;
+      doc.head.appendChild(style);
+    }
     if (!activeHighlight) {
       activeHighlight = doc.createElement("div");
       activeHighlight.id = "patchwork-inspector-outline";
@@ -392,8 +402,8 @@ function initVisualInspector(options = {}) {
       return;
     }
     const rect = target.getBoundingClientRect();
-    const scrollX = win.scrollX || 0;
-    const scrollY = win.scrollY || 0;
+    const scrollX = win.scrollX !== void 0 ? win.scrollX : win.pageXOffset || doc.documentElement?.scrollLeft || 0;
+    const scrollY = win.scrollY !== void 0 ? win.scrollY : win.pageYOffset || doc.documentElement?.scrollTop || 0;
     if (activeHighlight) {
       activeHighlight.style.display = "block";
       activeHighlight.style.top = `${rect.top + scrollY}px`;
@@ -421,9 +431,9 @@ function initVisualInspector(options = {}) {
     if (options.onSelect) {
       options.onSelect(fingerprint);
     }
-    const targetWindow = win.opener || (win.parent !== win ? win.parent : null);
-    if (targetWindow) {
-      targetWindow.postMessage(
+    const targets = [win.opener, win.parent !== win ? win.parent : null].filter(Boolean);
+    for (const tw of targets) {
+      tw.postMessage(
         {
           type: "PATCHWORK_ELEMENT_SELECTED",
           fingerprint
@@ -433,15 +443,32 @@ function initVisualInspector(options = {}) {
     }
     toggleInspector(false);
   }
+  function handleKeyDown(e) {
+    if (e.key === "Escape" && isEnabled) {
+      toggleInspector(false);
+      const targets = [win.opener, win.parent !== win ? win.parent : null].filter(Boolean);
+      for (const tw of targets) {
+        tw.postMessage({ type: "PATCHWORK_INSPECTOR_CANCELLED" }, "*");
+      }
+    }
+  }
   function toggleInspector(enable) {
     isEnabled = enable !== void 0 ? enable : !isEnabled;
     createOverlayElements();
     if (isEnabled) {
       doc.addEventListener("mousemove", handleMouseMove, true);
       doc.addEventListener("click", handleClick, true);
+      doc.addEventListener("keydown", handleKeyDown, true);
+      if (doc.body) {
+        doc.body.classList.add("patchwork-inspecting");
+      }
     } else {
       doc.removeEventListener("mousemove", handleMouseMove, true);
       doc.removeEventListener("click", handleClick, true);
+      doc.removeEventListener("keydown", handleKeyDown, true);
+      if (doc.body) {
+        doc.body.classList.remove("patchwork-inspecting");
+      }
       if (activeHighlight) activeHighlight.style.display = "none";
       if (activeTooltip) activeTooltip.style.display = "none";
     }
@@ -450,11 +477,12 @@ function initVisualInspector(options = {}) {
   win.addEventListener("message", (msg) => {
     if (!msg.data) return;
     if (msg.data.type === "PATCHWORK_TOGGLE_INSPECTOR") {
-      toggleInspector(Boolean(msg.data.enabled));
+      const nextState = msg.data.enabled !== void 0 ? Boolean(msg.data.enabled) : !isEnabled;
+      toggleInspector(nextState);
     } else if (msg.data.type === "PATCHWORK_PING_INSPECTOR") {
-      const targetWindow = win.opener || (win.parent !== win ? win.parent : null);
-      if (targetWindow) {
-        targetWindow.postMessage({ type: "PATCHWORK_INSPECTOR_READY", isEnabled }, "*");
+      const targets = [win.opener, win.parent !== win ? win.parent : null].filter(Boolean);
+      for (const tw of targets) {
+        tw.postMessage({ type: "PATCHWORK_INSPECTOR_READY", isEnabled }, "*");
       }
     } else if (msg.data.type === "PATCHWORK_LIVE_PREVIEW") {
       const { patch } = msg.data;
@@ -469,9 +497,9 @@ function initVisualInspector(options = {}) {
     }
   });
   const notifyReady = () => {
-    const targetWindow = win.opener || (win.parent !== win ? win.parent : null);
-    if (targetWindow) {
-      targetWindow.postMessage({ type: "PATCHWORK_INSPECTOR_READY", isEnabled }, "*");
+    const targets = [win.opener, win.parent !== win ? win.parent : null].filter(Boolean);
+    for (const tw of targets) {
+      tw.postMessage({ type: "PATCHWORK_INSPECTOR_READY", isEnabled }, "*");
     }
   };
   notifyReady();

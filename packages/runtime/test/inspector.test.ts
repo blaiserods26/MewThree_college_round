@@ -4,6 +4,7 @@ import {
   generateElementSelector,
   extractTargetFingerprint,
   isAmbiguousContainer,
+  initVisualInspector,
 } from "../src/inspector.js";
 
 describe("Visual Element Inspector & Fingerprint Extraction", () => {
@@ -52,5 +53,54 @@ describe("Visual Element Inspector & Fingerprint Extraction", () => {
     expect(isAmbiguousContainer(body)).toBe(true);
     expect(isAmbiguousContainer(main)).toBe(true);
     expect(isAmbiguousContainer(btn)).toBe(false);
+  });
+
+  it("activates inspector upon PATCHWORK_TOGGLE_INSPECTOR and selects element on click", () => {
+    let selectedFp: any = null;
+    const receivedMessages: any[] = [];
+
+    // Mock parent window
+    const mockParent = {
+      postMessage: (msg: any) => {
+        receivedMessages.push(msg);
+      },
+    };
+    (window as any).parent = mockParent;
+
+    const inspector = initVisualInspector({
+      doc: document,
+      win: window as unknown as Window,
+      onSelect: (fp: any) => {
+        selectedFp = fp;
+      },
+    });
+
+    // Send toggle inspector message with enabled: true
+    window.dispatchEvent(
+      new (window as any).MessageEvent("message", {
+        data: { type: "PATCHWORK_TOGGLE_INSPECTOR", enabled: true },
+      })
+    );
+
+    expect(document.body.classList.contains("patchwork-inspecting")).toBe(true);
+
+    // Click target element
+    const btn = document.getElementById("checkout-btn") as HTMLElement;
+    btn.dispatchEvent(
+      new (window as any).MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+
+    expect(selectedFp).not.toBeNull();
+    expect(selectedFp.selector).toBe("#checkout-btn");
+    expect(document.body.classList.contains("patchwork-inspecting")).toBe(false);
+
+    const selectMsg = receivedMessages.find(
+      (m) => m.type === "PATCHWORK_ELEMENT_SELECTED"
+    );
+    expect(selectMsg).toBeDefined();
+    expect(selectMsg.fingerprint.selector).toBe("#checkout-btn");
   });
 });

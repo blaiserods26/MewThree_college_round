@@ -117,6 +117,17 @@ export function initVisualInspector(options: InspectorOptions = {}) {
   let isEnabled = false;
 
   function createOverlayElements() {
+    if (!doc.getElementById("patchwork-inspector-styles") && doc.head) {
+      const style = doc.createElement("style");
+      style.id = "patchwork-inspector-styles";
+      style.textContent = `
+        .patchwork-inspecting, .patchwork-inspecting * {
+          cursor: crosshair !important;
+        }
+      `;
+      doc.head.appendChild(style);
+    }
+
     if (!activeHighlight) {
       activeHighlight = doc.createElement("div");
       activeHighlight.id = "patchwork-inspector-outline";
@@ -143,8 +154,8 @@ export function initVisualInspector(options: InspectorOptions = {}) {
     }
 
     const rect = target.getBoundingClientRect();
-    const scrollX = win.scrollX || 0;
-    const scrollY = win.scrollY || 0;
+    const scrollX = win.scrollX !== undefined ? win.scrollX : (win.pageXOffset || doc.documentElement?.scrollLeft || 0);
+    const scrollY = win.scrollY !== undefined ? win.scrollY : (win.pageYOffset || doc.documentElement?.scrollTop || 0);
 
     if (activeHighlight) {
       activeHighlight.style.display = "block";
@@ -180,10 +191,10 @@ export function initVisualInspector(options: InspectorOptions = {}) {
       options.onSelect(fingerprint);
     }
 
-    // Broadcast via postMessage to parent/opener dashboard
-    const targetWindow = win.opener || (win.parent !== win ? win.parent : null);
-    if (targetWindow) {
-      targetWindow.postMessage(
+    // Broadcast via postMessage to parent and opener dashboards
+    const targets = [win.opener, win.parent !== win ? win.parent : null].filter(Boolean);
+    for (const tw of targets) {
+      tw.postMessage(
         {
           type: "PATCHWORK_ELEMENT_SELECTED",
           fingerprint,
@@ -196,6 +207,16 @@ export function initVisualInspector(options: InspectorOptions = {}) {
     toggleInspector(false);
   }
 
+  function handleKeyDown(e: KeyboardEvent) {
+    if (e.key === "Escape" && isEnabled) {
+      toggleInspector(false);
+      const targets = [win.opener, win.parent !== win ? win.parent : null].filter(Boolean);
+      for (const tw of targets) {
+        tw.postMessage({ type: "PATCHWORK_INSPECTOR_CANCELLED" }, "*");
+      }
+    }
+  }
+
   function toggleInspector(enable?: boolean) {
     isEnabled = enable !== undefined ? enable : !isEnabled;
     createOverlayElements();
@@ -203,9 +224,17 @@ export function initVisualInspector(options: InspectorOptions = {}) {
     if (isEnabled) {
       doc.addEventListener("mousemove", handleMouseMove, true);
       doc.addEventListener("click", handleClick, true);
+      doc.addEventListener("keydown", handleKeyDown, true);
+      if (doc.body) {
+        doc.body.classList.add("patchwork-inspecting");
+      }
     } else {
       doc.removeEventListener("mousemove", handleMouseMove, true);
       doc.removeEventListener("click", handleClick, true);
+      doc.removeEventListener("keydown", handleKeyDown, true);
+      if (doc.body) {
+        doc.body.classList.remove("patchwork-inspecting");
+      }
       if (activeHighlight) activeHighlight.style.display = "none";
       if (activeTooltip) activeTooltip.style.display = "none";
     }
@@ -216,11 +245,13 @@ export function initVisualInspector(options: InspectorOptions = {}) {
   win.addEventListener("message", (msg) => {
     if (!msg.data) return;
     if (msg.data.type === "PATCHWORK_TOGGLE_INSPECTOR") {
-      toggleInspector(Boolean(msg.data.enabled));
+      const nextState =
+        msg.data.enabled !== undefined ? Boolean(msg.data.enabled) : !isEnabled;
+      toggleInspector(nextState);
     } else if (msg.data.type === "PATCHWORK_PING_INSPECTOR") {
-      const targetWindow = win.opener || (win.parent !== win ? win.parent : null);
-      if (targetWindow) {
-        targetWindow.postMessage({ type: "PATCHWORK_INSPECTOR_READY", isEnabled }, "*");
+      const targets = [win.opener, win.parent !== win ? win.parent : null].filter(Boolean);
+      for (const tw of targets) {
+        tw.postMessage({ type: "PATCHWORK_INSPECTOR_READY", isEnabled }, "*");
       }
     } else if (msg.data.type === "PATCHWORK_LIVE_PREVIEW") {
       const { patch } = msg.data;
@@ -237,9 +268,9 @@ export function initVisualInspector(options: InspectorOptions = {}) {
 
   // Signal ready handshake to dashboard
   const notifyReady = () => {
-    const targetWindow = win.opener || (win.parent !== win ? win.parent : null);
-    if (targetWindow) {
-      targetWindow.postMessage({ type: "PATCHWORK_INSPECTOR_READY", isEnabled }, "*");
+    const targets = [win.opener, win.parent !== win ? win.parent : null].filter(Boolean);
+    for (const tw of targets) {
+      tw.postMessage({ type: "PATCHWORK_INSPECTOR_READY", isEnabled }, "*");
     }
   };
   notifyReady();

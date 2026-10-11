@@ -39,7 +39,7 @@ if not exist "%~dp0.env" (
 
 :: 3. Verify dependencies
 if not exist "%~dp0node_modules" (
-    echo [*] Installing workspace dependencies (npm install)...
+    echo [*] Installing workspace dependencies [npm install]...
     call npm install
     if %ERRORLEVEL% neq 0 (
         echo [ERROR] Failed to install dependencies.
@@ -60,7 +60,7 @@ if not exist "%~dp0packages\runtime\dist" (
 )
 
 if defined NEED_BUILD (
-    echo [*] Build artifacts missing. Compiling monorepo workspaces (npm run build)...
+    echo [*] Build artifacts missing. Compiling monorepo workspaces [npm run build]...
     call npm run build
     if %ERRORLEVEL% neq 0 (
         echo [ERROR] Workspace build failed.
@@ -74,8 +74,8 @@ if defined NEED_BUILD (
 
 :: 5. Clean up any existing instances on ports 4000, 3000, 5173 to avoid duplicate collision
 for %%P in (4000 3000 5173) do (
-    for /f "tokens=5" %%a in ('netstat -aon ^| findstr /r /c:":%%P *LISTENING"') do (
-        echo [*] Clearing existing listener on Port %%P (PID %%a)...
+    for /f "tokens=5" %%a in ('netstat -aon ^| findstr :%%P ^| findstr LISTENING') do (
+        echo [*] Clearing existing listener on Port %%P [PID %%a]...
         taskkill /f /pid %%a >nul 2>nul
     )
 )
@@ -87,13 +87,13 @@ call npm run demo:reset
 :: 7. Launch the services in dedicated console windows
 echo.
 echo [*] Launching API Server on Port 4000...
-start "PATCHWORK API Server [Port 4000]" cmd /k "title PATCHWORK API Server [Port 4000] && cd /d "%~dp0" && npm run start --workspace=packages/server"
+start "PATCHWORK API Server [Port 4000]" cmd /k "title PATCHWORK API Server [Port 4000] && npm run start --workspace=packages/server"
 
 echo [*] Launching Host Storefront on Port 3000...
-start "PATCHWORK Storefront [Port 3000]" cmd /k "title PATCHWORK Storefront [Port 3000] && cd /d "%~dp0" && npm run start --workspace=packages/storefront"
+start "PATCHWORK Storefront [Port 3000]" cmd /k "title PATCHWORK Storefront [Port 3000] && npm run start --workspace=packages/storefront"
 
 echo [*] Launching React Workbench Dashboard on Port 5173...
-start "PATCHWORK Dashboard [Port 5173]" cmd /k "title PATCHWORK Dashboard [Port 5173] && cd /d "%~dp0" && npm run start --workspace=packages/dashboard"
+start "PATCHWORK Dashboard [Port 5173]" cmd /k "title PATCHWORK Dashboard [Port 5173] && npm run start --workspace=packages/dashboard"
 
 :: 8. Active readiness polling
 echo.

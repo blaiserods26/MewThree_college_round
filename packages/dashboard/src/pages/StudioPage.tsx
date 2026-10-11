@@ -99,14 +99,23 @@ export const StudioPage: React.FC<StudioPageProps> = ({
       showToast(`Selected element: <${fp.tag}> (${fp.selector})`, 'info');
     });
 
+    bridge.setCancelledHandler(() => {
+      setIsSelecting(false);
+    });
+
     return () => {
       bridge.setElementSelectedHandler(null);
+      bridge.setCancelledHandler(null);
     };
   }, [showToast]);
 
   const handleToggleSelect = () => {
-    bridge.toggleInspector();
-    setIsSelecting((prev) => !prev);
+    const nextSelecting = !isSelecting;
+    setIsSelecting(nextSelecting);
+    bridge.toggleInspector(nextSelecting);
+    if (nextSelecting) {
+      showToast('Click any element on the storefront canvas to inspect', 'info');
+    }
   };
 
   const handleApplyPreview = () => {
@@ -394,6 +403,11 @@ export const StudioPage: React.FC<StudioPageProps> = ({
               ref={iframeRef}
               id="storefront-preview-iframe"
               src={getStorefrontUrl()}
+              onLoad={() => {
+                if (iframeRef.current) {
+                  bridge.bindIframe(iframeRef.current);
+                }
+              }}
               style={{
                 width: '100%',
                 height: '100%',
