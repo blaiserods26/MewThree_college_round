@@ -161,7 +161,8 @@ export const api = {
     patchIds: string[];
     actor?: string;
   }): Promise<Release> {
-    return request<Release>('/releases', {
+    const websiteId = data.websiteId || 'demo-store';
+    return request<Release>(`/websites/${websiteId}/releases`, {
       method: 'POST',
       body: JSON.stringify(data),
     });

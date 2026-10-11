@@ -18,6 +18,7 @@ import {
   FileCheck2,
   Copy,
   Layers,
+  ExternalLink,
 } from 'lucide-react';
 import type {
   Patch,
@@ -59,6 +60,9 @@ export const StudioPage: React.FC<StudioPageProps> = ({
 
   // Inspector form state
   const [patchName, setPatchName] = useState(currentPatch?.name || 'New Mobile Layout Fix');
+  const [selectedFingerprint, setSelectedFingerprint] = useState<TargetFingerprint | null>(
+    currentPatch?.targetFingerprint || null
+  );
   const [selectedTag, setSelectedTag] = useState(currentPatch?.targetFingerprint?.tag || 'button');
   const [selectedSelector, setSelectedSelector] = useState(
     currentPatch?.targetFingerprint?.selector || '#checkout-btn'
@@ -77,6 +81,7 @@ export const StudioPage: React.FC<StudioPageProps> = ({
   useEffect(() => {
     if (currentPatch) {
       setPatchName(currentPatch.name);
+      setSelectedFingerprint(currentPatch.targetFingerprint || null);
       setSelectedTag(currentPatch.targetFingerprint?.tag || 'element');
       setSelectedSelector(currentPatch.targetFingerprint?.selector || '');
       setOpType(currentPatch.operation?.type || 'style.set');
@@ -93,6 +98,7 @@ export const StudioPage: React.FC<StudioPageProps> = ({
     }
 
     bridge.setElementSelectedHandler((fp: TargetFingerprint) => {
+      setSelectedFingerprint(fp);
       setSelectedTag(fp.tag);
       setSelectedSelector(fp.selector);
       setIsSelecting(false);
@@ -101,6 +107,7 @@ export const StudioPage: React.FC<StudioPageProps> = ({
 
     bridge.setCancelledHandler(() => {
       setIsSelecting(false);
+      showToast('Element selection cancelled', 'info');
     });
 
     return () => {
@@ -109,25 +116,50 @@ export const StudioPage: React.FC<StudioPageProps> = ({
     };
   }, [showToast]);
 
+  // Handle global Escape key cancellation in dashboard window
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isSelecting) {
+        setIsSelecting(false);
+        bridge.toggleInspector(false);
+        showToast('Element selection cancelled', 'info');
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleGlobalKeyDown);
+    };
+  }, [isSelecting, showToast]);
+
   const handleToggleSelect = () => {
     const nextSelecting = !isSelecting;
     setIsSelecting(nextSelecting);
     bridge.toggleInspector(nextSelecting);
     if (nextSelecting) {
-      showToast('Click any element on the storefront canvas to inspect', 'info');
+      showToast('Click any element on the storefront canvas to inspect (Press Esc to cancel)', 'info');
     }
   };
 
   const handleApplyPreview = () => {
+    if (opType === 'style.set' && opProperty.trim().toLowerCase() === 'display' && opValue.trim().toLowerCase() === 'hidden') {
+      showToast('Invalid CSS: "display" does not accept "hidden". Use "none" (display: none), "visibility: hidden", or operation "element.hide".', 'warning');
+      return;
+    }
     const op: PatchOperation = {
       type: opType,
       property: opProperty,
       value: opValue,
     };
-    const fp: TargetFingerprint = {
-      tag: selectedTag,
-      selector: selectedSelector,
-    };
+    const fp: TargetFingerprint = selectedFingerprint
+      ? {
+          ...selectedFingerprint,
+          tag: selectedTag,
+          selector: selectedSelector,
+        }
+      : {
+          tag: selectedTag,
+          selector: selectedSelector,
+        };
     bridge.applyLivePreview({ operation: op, targetFingerprint: fp });
     setIsPreviewActive(true);
     showToast('Live preview applied to embedded storefront canvas', 'success');
@@ -140,6 +172,10 @@ export const StudioPage: React.FC<StudioPageProps> = ({
   };
 
   const handleSaveDraft = async () => {
+    if (opType === 'style.set' && opProperty.trim().toLowerCase() === 'display' && opValue.trim().toLowerCase() === 'hidden') {
+      showToast('Invalid CSS: "display" does not accept "hidden". Use "none" (display: none), "visibility: hidden", or operation "element.hide".', 'warning');
+      return;
+    }
     setIsSaving(true);
     try {
       const op: PatchOperation = {
@@ -147,10 +183,16 @@ export const StudioPage: React.FC<StudioPageProps> = ({
         property: opProperty,
         value: opValue,
       };
-      const fp: TargetFingerprint = {
-        tag: selectedTag,
-        selector: selectedSelector,
-      };
+      const fp: TargetFingerprint = selectedFingerprint
+        ? {
+            ...selectedFingerprint,
+            tag: selectedTag,
+            selector: selectedSelector,
+          }
+        : {
+            tag: selectedTag,
+            selector: selectedSelector,
+          };
 
       let saved: Patch;
       if (currentPatch) {
@@ -357,6 +399,20 @@ export const StudioPage: React.FC<StudioPageProps> = ({
             <span>{isVerifying ? 'Verifying...' : 'Verify Patch'}</span>
           </button>
 
+          {currentPatch?.id && (
+            <a
+              href={`${getStorefrontUrl()}/?patchwork_preview=${encodeURIComponent(currentPatch.id)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="pw-btn pw-btn-secondary pw-btn-sm"
+              title="Open isolated preview in separate browser tab"
+              style={{ textDecoration: 'none' }}
+            >
+              <ExternalLink size={12} />
+              <span>Preview Tab</span>
+            </a>
+          )}
+
           <button
             className="pw-btn pw-btn-primary pw-btn-sm"
             onClick={handlePublishRelease}
@@ -402,7 +458,11 @@ export const StudioPage: React.FC<StudioPageProps> = ({
             <iframe
               ref={iframeRef}
               id="storefront-preview-iframe"
-              src={getStorefrontUrl()}
+              src={
+                currentPatch?.id
+                  ? `${getStorefrontUrl()}/?patchwork_preview=${encodeURIComponent(currentPatch.id)}`
+                  : getStorefrontUrl()
+              }
               onLoad={() => {
                 if (iframeRef.current) {
                   bridge.bindIframe(iframeRef.current);
@@ -545,6 +605,11 @@ export const StudioPage: React.FC<StudioPageProps> = ({
                     onChange={(e) => setOpValue(e.target.value)}
                     placeholder="e.g. inline-block, 12px, 100%"
                   />
+                  {opProperty.trim().toLowerCase() === 'display' && opValue.trim().toLowerCase() === 'hidden' && (
+                    <div style={{ fontSize: '11px', color: 'var(--pw-warning)', marginTop: '6px', lineHeight: 1.4, padding: '6px 8px', backgroundColor: 'rgba(234, 179, 8, 0.1)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(234, 179, 8, 0.3)' }}>
+                      ⚠️ In CSS, <code>display: hidden</code> is invalid. To hide an element, change Proposed Value to <strong>none</strong>, or switch Operation Type to <strong>element.hide</strong>.
+                    </div>
+                  )}
                 </div>
               </>
             )}

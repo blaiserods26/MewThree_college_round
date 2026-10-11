@@ -1,5 +1,9 @@
 import type { TargetFingerprint } from "@patchwork/contracts";
-import { applyPatchToDom, revertPatchOnDom } from "./mutation.js";
+import {
+  applyPatchToDom,
+  revertPatchOnDom,
+  type ApplyPatchResult,
+} from "./mutation.js";
 
 const AMBIGUOUS_CONTAINER_TAGS = new Set(["HTML", "BODY", "MAIN", "SECTION", "HEADER", "FOOTER"]);
 const AMBIGUOUS_CLASSES = new Set(["storefront-app", "store-main", "catalog-grid", "container"]);
@@ -115,6 +119,7 @@ export function initVisualInspector(options: InspectorOptions = {}) {
   let activeHighlight: HTMLElement | null = null;
   let activeTooltip: HTMLElement | null = null;
   let isEnabled = false;
+  let activePreviewResult: ApplyPatchResult | null = null;
 
   function createOverlayElements() {
     if (!doc.getElementById("patchwork-inspector-styles") && doc.head) {
@@ -256,12 +261,16 @@ export function initVisualInspector(options: InspectorOptions = {}) {
     } else if (msg.data.type === "PATCHWORK_LIVE_PREVIEW") {
       const { patch } = msg.data;
       if (patch && patch.operation) {
-        applyPatchToDom(patch, doc);
+        if (activePreviewResult) {
+          revertPatchOnDom(activePreviewResult, doc);
+          activePreviewResult = null;
+        }
+        activePreviewResult = applyPatchToDom(patch, doc);
       }
     } else if (msg.data.type === "PATCHWORK_REVERT_PREVIEW") {
-      const { patch } = msg.data;
-      if (patch && patch.operation) {
-        revertPatchOnDom(patch, doc);
+      if (activePreviewResult) {
+        revertPatchOnDom(activePreviewResult, doc);
+        activePreviewResult = null;
       }
     }
   });

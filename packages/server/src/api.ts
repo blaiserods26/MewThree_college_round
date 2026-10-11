@@ -297,6 +297,23 @@ export function createServer(service: PatchService, options: ApiServerOptions = 
         return sendJson(res, 200, result);
       }
 
+      if (pathname === "/api/conflicts/resolve" && method === "POST") {
+        const body = await parseJsonBody(req);
+        const winnerId = body.winnerPatchId || body.patchId;
+        if (!winnerId) {
+          return sendJson(res, 400, { error: "winnerPatchId is required." });
+        }
+        const strategy = body.strategy === "revise_value" ? "revise_value" : "keep_this";
+        const loserId = body.loserPatchId || body.competingPatchId;
+        const result = service.resolvePatchConflict(winnerId, {
+          strategy: strategy as any,
+          supersededPatchId: loserId,
+          revisedOperation: body.revisedValue ? { type: "style.set", property: "color", value: body.revisedValue } : undefined,
+          actor: body.actor || { id: "anonymous", name: "Anonymous", role: "developer" },
+        });
+        return sendJson(res, 200, { resolved: true, message: "Conflict resolved successfully", ...result });
+      }
+
       // Execute Automated Verification for Patch
       const verifyMatch = pathname.match(/^\/api\/patches\/([^/]+)\/verify$/);
       if (verifyMatch && method === "POST") {
@@ -335,6 +352,18 @@ export function createServer(service: PatchService, options: ApiServerOptions = 
       if (pathname === "/api/releases" && method === "GET") {
         const websiteId = parsedUrl.searchParams.get("websiteId") || undefined;
         return sendJson(res, 200, service.listReleases(websiteId));
+      }
+
+      if (pathname === "/api/releases" && method === "POST") {
+        const body = await parseJsonBody(req);
+        const websiteId = body.websiteId || "demo-store";
+        const release = service.createRelease({
+          websiteId,
+          patchIds: body.patchIds || [],
+          actor: body.actor || { id: "anonymous", name: "Anonymous", role: "developer" },
+          changeSummary: body.changeSummary,
+        });
+        return sendJson(res, 201, release);
       }
 
       // 5. AI Endpoints (Phase 8)

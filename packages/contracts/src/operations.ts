@@ -96,6 +96,13 @@ export function validatePatchOperation(op: PatchOperation): OperationValidationR
       if (typeof op.value !== "string") {
         return { valid: false, error: "Style value must be a string." };
       }
+      const valLower = op.value.toLowerCase().trim();
+      if (propLower === "display" && valLower === "hidden") {
+        return {
+          valid: false,
+          error: "Invalid CSS value: 'display' does not accept 'hidden'. Use 'display: none', 'visibility: hidden', or the 'element.hide' operation.",
+        };
+      }
       for (const pattern of DANGEROUS_CSS_PATTERNS) {
         if (pattern.test(op.value)) {
           return { valid: false, error: "Dangerous CSS expression detected in style value." };

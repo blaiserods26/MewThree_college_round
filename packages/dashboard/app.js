@@ -376,6 +376,11 @@
       const property = inspectorPropInput ? inspectorPropInput.value.trim() : "display";
       const value = inspectorValInput ? inspectorValInput.value.trim() : "inline-block";
 
+      if (opType === "style.set" && property.toLowerCase() === "display" && value.toLowerCase() === "hidden") {
+        showToast('Invalid CSS: "display" does not accept "hidden". Use "display: none", "visibility: hidden", or "element.hide".', "warning");
+        return;
+      }
+
       const patch = {
         targetFingerprint: { selector, tag: "element" },
         operation: opType === "style.set" ? { type: "style.set", property, value } : { type: opType, value },
@@ -426,6 +431,11 @@
       const property = inspectorPropInput ? inspectorPropInput.value.trim() : "display";
       const value = inspectorValInput ? inspectorValInput.value.trim() : "inline-block";
       const tag = inspectorElementRole ? inspectorElementRole.textContent.trim() : "button";
+
+      if (opType === "style.set" && property.toLowerCase() === "display" && value.toLowerCase() === "hidden") {
+        showToast('Invalid CSS: "display" does not accept "hidden". Use "display: none", "visibility: hidden", or "element.hide".', "warning");
+        return;
+      }
 
       const operation =
         opType === "style.set"

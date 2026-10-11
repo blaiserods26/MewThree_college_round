@@ -85,6 +85,13 @@ function validatePatchOperation(op) {
       if (typeof op.value !== "string") {
         return { valid: false, error: "Style value must be a string." };
       }
+      const valLower = op.value.toLowerCase().trim();
+      if (propLower === "display" && valLower === "hidden") {
+        return {
+          valid: false,
+          error: "Invalid CSS value: 'display' does not accept 'hidden'. Use 'display: none', 'visibility: hidden', or the 'element.hide' operation."
+        };
+      }
       for (const pattern of DANGEROUS_CSS_PATTERNS) {
         if (pattern.test(op.value)) {
           return { valid: false, error: "Dangerous CSS expression detected in style value." };
@@ -369,6 +376,7 @@ function initVisualInspector(options = {}) {
   let activeHighlight = null;
   let activeTooltip = null;
   let isEnabled = false;
+  let activePreviewResult = null;
   function createOverlayElements() {
     if (!doc.getElementById("patchwork-inspector-styles") && doc.head) {
       const style = doc.createElement("style");
@@ -487,12 +495,16 @@ function initVisualInspector(options = {}) {
     } else if (msg.data.type === "PATCHWORK_LIVE_PREVIEW") {
       const { patch } = msg.data;
       if (patch && patch.operation) {
-        applyPatchToDom(patch, doc);
+        if (activePreviewResult) {
+          revertPatchOnDom(activePreviewResult, doc);
+          activePreviewResult = null;
+        }
+        activePreviewResult = applyPatchToDom(patch, doc);
       }
     } else if (msg.data.type === "PATCHWORK_REVERT_PREVIEW") {
-      const { patch } = msg.data;
-      if (patch && patch.operation) {
-        revertPatchOnDom(patch, doc);
+      if (activePreviewResult) {
+        revertPatchOnDom(activePreviewResult, doc);
+        activePreviewResult = null;
       }
     }
   });

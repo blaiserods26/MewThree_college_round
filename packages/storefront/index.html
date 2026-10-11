@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AeroStyle Collective — Modern E-Commerce Storefront</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -13,12 +16,20 @@
       <div id="promo-banner" class="promo-banner">
         <span class="badge">SEASON FINALE</span>
         <span id="promo-banner-text" class="promo-text">Get 20% off all minimalist everyday carry essentials with code PATCHWORK20</span>
+        <button id="promo-copy-btn" class="promo-copy-btn" type="button" title="Copy code">Copy Code</button>
       </div>
-      <div class="nav-bar">
+
+      <nav class="nav-bar">
         <div class="brand-logo">
-          <span class="logo-mark">▲</span>
-          <h1 id="store-headline" class="brand-name">AeroStyle</h1>
+          <div class="logo-icon-wrapper">
+            <span class="logo-mark">▲</span>
+          </div>
+          <div class="brand-text-group">
+            <h1 id="store-headline" class="brand-name">AeroStyle</h1>
+            <span class="brand-tagline">Collective</span>
+          </div>
         </div>
+
         <div class="nav-controls">
           <div class="drift-simulation-panel">
             <span class="simulation-label">Dev Controls:</span>
@@ -29,84 +40,217 @@
               ↺ Reset Baseline
             </button>
           </div>
-          <button id="cart-toggle-btn" class="cart-button" type="button">
-            <span>🛒 Cart</span>
+
+          <button id="cart-toggle-btn" class="cart-button" type="button" aria-label="Open Shopping Cart">
+            <svg class="cart-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="8" cy="21" r="1"/>
+              <circle cx="19" cy="21" r="1"/>
+              <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
+            </svg>
+            <span class="cart-btn-label">Cart</span>
             <span id="cart-count" class="cart-badge">2</span>
           </button>
         </div>
-      </div>
+      </nav>
     </header>
 
     <!-- Main Content -->
     <main class="store-main">
+      <!-- Hero Section -->
       <section class="hero-section">
+        <div class="hero-badge">
+          <span class="pulse-dot"></span>
+          <span>AUTUMN / WINTER 2026 TECHNICAL DROP</span>
+        </div>
         <div class="hero-content">
           <h2 class="hero-title">Precision Gear for the Modern Explorer</h2>
-          <p class="hero-subtitle">Ergonomically engineered apparel and everyday utility carry, crafted for all-day performance.</p>
+          <p class="hero-subtitle">Ergonomically engineered apparel and everyday utility carry, crafted for all-day performance in extreme climates and city commutes.</p>
+        </div>
+        <div class="hero-features-bar">
+          <div class="feature-item">
+            <span class="feature-icon">🛡️</span>
+            <span>3-Layer Weatherproof Membrane</span>
+          </div>
+          <div class="feature-separator">•</div>
+          <div class="feature-item">
+            <span class="feature-icon">🧲</span>
+            <span>Modular Fidlock® Magnetic Hardware</span>
+          </div>
+          <div class="feature-separator">•</div>
+          <div class="feature-item">
+            <span class="feature-icon">✈️</span>
+            <span>Free Express Global Shipping</span>
+          </div>
         </div>
       </section>
 
-      <section class="catalog-grid">
-        <!-- Product 1 -->
-        <article class="product-card" id="product-1">
-          <div class="product-image-container">
-            <div class="product-mock-visual bg-mesh-1"></div>
-            <span class="product-tag">Bestseller</span>
+      <!-- Catalog Section -->
+      <section class="catalog-container">
+        <div class="catalog-header">
+          <div>
+            <h3 class="section-title">Core Collection</h3>
+            <p class="section-desc">Engineered in Tokyo & Portland. Limited batch allocation.</p>
           </div>
-          <div class="product-info">
-            <h3 class="product-title">Nomad Matte Shell Jacket</h3>
-            <p class="product-desc">Weatherproof 3-layer breathable membrane with magnetic cuffs.</p>
-            <div class="product-meta">
-              <span class="product-price">$240.00</span>
-              <button class="btn btn-primary add-to-cart-btn" data-product-id="1" data-price="240">Add to Cart</button>
-            </div>
+          <div class="catalog-filter-tags">
+            <span class="filter-pill active">All Gear</span>
+            <span class="filter-pill">Outerwear</span>
+            <span class="filter-pill">Bags</span>
+            <span class="filter-pill">Horology</span>
           </div>
-        </article>
+        </div>
 
-        <!-- Product 2 -->
-        <article class="product-card" id="product-2">
-          <div class="product-image-container">
-            <div class="product-mock-visual bg-mesh-2"></div>
-            <span class="product-tag">New</span>
-          </div>
-          <div class="product-info">
-            <h3 class="product-title">Carbon Modular Sling Pack</h3>
-            <p class="product-desc">Water-resistant Cordura nylon with quick-release Fidlock magnetic clasp.</p>
-            <div class="product-meta">
-              <span class="product-price">$120.00</span>
-              <button class="btn btn-primary add-to-cart-btn" data-product-id="2" data-price="120">Add to Cart</button>
+        <div class="catalog-grid">
+          <!-- Product 1 -->
+          <article class="product-card" id="product-1">
+            <div class="product-image-container">
+              <img src="images/jacket.jpg" alt="Nomad Matte Shell Jacket" class="product-img" loading="eager">
+              <span class="product-tag tag-bestseller">Bestseller</span>
+              <span class="stock-badge">In Stock</span>
             </div>
-          </div>
-        </article>
+            <div class="product-info">
+              <div class="product-rating">
+                <span class="stars">★★★★★</span>
+                <span class="rating-score">4.9</span>
+                <span class="rating-count">(142)</span>
+              </div>
+              <h3 class="product-title">Nomad Matte Shell Jacket</h3>
+              <p class="product-desc">Weatherproof 3-layer breathable membrane with magnetic cuffs and storm hood.</p>
+              <div class="product-specs">
+                <span class="spec-chip">GORE-TEX 3L</span>
+                <span class="spec-chip">YKK Aquaguard</span>
+                <span class="spec-chip">Matte Slate</span>
+              </div>
+              <div class="product-meta">
+                <div class="price-group">
+                  <span class="product-price">$240.00</span>
+                  <span class="compare-price">$295.00</span>
+                </div>
+                <button class="btn btn-primary add-to-cart-btn" data-product-id="1" data-price="240">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  <span>Add to Cart</span>
+                </button>
+              </div>
+            </div>
+          </article>
 
-        <!-- Product 3 -->
-        <article class="product-card" id="product-3">
-          <div class="product-image-container">
-            <div class="product-mock-visual bg-mesh-3"></div>
-            <span class="product-tag">Popular</span>
-          </div>
-          <div class="product-info">
-            <h3 class="product-title">Titanium Kinetic Chrono</h3>
-            <p class="product-desc">Grade 5 titanium casing with sapphire crystal glass and solar movement.</p>
-            <div class="product-meta">
-              <span class="product-price">$380.00</span>
-              <button class="btn btn-primary add-to-cart-btn" data-product-id="3" data-price="380">Add to Cart</button>
+          <!-- Product 2 -->
+          <article class="product-card" id="product-2">
+            <div class="product-image-container">
+              <img src="images/sling.jpg" alt="Carbon Modular Sling Pack" class="product-img" loading="eager">
+              <span class="product-tag tag-new">New</span>
+              <span class="stock-badge">Low Stock (4 left)</span>
             </div>
-          </div>
-        </article>
+            <div class="product-info">
+              <div class="product-rating">
+                <span class="stars">★★★★★</span>
+                <span class="rating-score">4.8</span>
+                <span class="rating-count">(89)</span>
+              </div>
+              <h3 class="product-title">Carbon Modular Sling Pack</h3>
+              <p class="product-desc">Water-resistant Cordura nylon with quick-release Fidlock magnetic clasp.</p>
+              <div class="product-specs">
+                <span class="spec-chip">Cordura® 500D</span>
+                <span class="spec-chip">Fidlock® V-Buckle</span>
+                <span class="spec-chip">9L Capacity</span>
+              </div>
+              <div class="product-meta">
+                <div class="price-group">
+                  <span class="product-price">$120.00</span>
+                  <span class="compare-price">$150.00</span>
+                </div>
+                <button class="btn btn-primary add-to-cart-btn" data-product-id="2" data-price="120">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  <span>Add to Cart</span>
+                </button>
+              </div>
+            </div>
+          </article>
+
+          <!-- Product 3 -->
+          <article class="product-card" id="product-3">
+            <div class="product-image-container">
+              <img src="images/watch.jpg" alt="Titanium Kinetic Chrono" class="product-img" loading="eager">
+              <span class="product-tag tag-popular">Popular</span>
+              <span class="stock-badge">In Stock</span>
+            </div>
+            <div class="product-info">
+              <div class="product-rating">
+                <span class="stars">★★★★★</span>
+                <span class="rating-score">5.0</span>
+                <span class="rating-count">(64)</span>
+              </div>
+              <h3 class="product-title">Titanium Kinetic Chrono</h3>
+              <p class="product-desc">Grade 5 titanium casing with sapphire crystal glass and solar movement.</p>
+              <div class="product-specs">
+                <span class="spec-chip">Grade 5 Ti</span>
+                <span class="spec-chip">Sapphire Crystal</span>
+                <span class="spec-chip">100m Water Resist</span>
+              </div>
+              <div class="product-meta">
+                <div class="price-group">
+                  <span class="product-price">$380.00</span>
+                  <span class="compare-price">$450.00</span>
+                </div>
+                <button class="btn btn-primary add-to-cart-btn" data-product-id="3" data-price="380">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  <span>Add to Cart</span>
+                </button>
+              </div>
+            </div>
+          </article>
+        </div>
       </section>
 
       <!-- Checkout Summary Drawer / Panel -->
       <section id="checkout-summary" class="checkout-summary-card">
         <div class="summary-header">
-          <h3 class="summary-title">Order Summary</h3>
-          <span class="items-count" id="summary-items-count">2 Items selected</span>
+          <div>
+            <h3 class="summary-title">Order Summary</h3>
+            <span class="items-count" id="summary-items-count">2 Items selected</span>
+          </div>
+          <button id="summary-edit-cart-btn" class="btn-link" type="button">
+            View / Edit Cart Items ↗
+          </button>
         </div>
+
+        <!-- Selected Cart Items Breakdown List -->
+        <div class="summary-items-preview">
+          <div class="preview-section-title">Selected Items in Bag</div>
+          <div id="order-summary-items" class="order-summary-items-list">
+            <!-- Dynamically populated from cart state -->
+          </div>
+        </div>
+
+        <!-- Promo Code Input -->
+        <div class="promo-code-box">
+          <div class="promo-input-wrapper">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+              <line x1="7" y1="7" x2="7.01" y2="7"/>
+            </svg>
+            <input type="text" id="promo-input" placeholder="Promo code (e.g. PATCHWORK20)" value="">
+          </div>
+          <button id="promo-apply-btn" class="btn btn-secondary promo-apply-btn" type="button">Apply</button>
+        </div>
+        <div id="promo-feedback" class="promo-feedback hidden"></div>
         
         <div class="summary-breakdown">
           <div class="summary-line">
             <span>Subtotal</span>
             <span id="summary-subtotal">$360.00</span>
+          </div>
+          <div id="summary-discount-row" class="summary-line discount-line hidden">
+            <span>Promo Discount (20%)</span>
+            <span id="summary-discount">-$72.00</span>
           </div>
           <div class="summary-line">
             <span>Standard Shipping</span>
@@ -125,14 +269,117 @@
           </button>
         </div>
 
+        <div class="trust-guarantees">
+          <div class="guarantee-item">
+            <span class="guarantee-icon">🔒</span>
+            <span>256-Bit Encrypted SSL Checkout</span>
+          </div>
+          <div class="guarantee-item">
+            <span class="guarantee-icon">↺</span>
+            <span>30-Day Risk-Free Return Guarantee</span>
+          </div>
+        </div>
+
         <div id="drift-status-banner" class="drift-status-banner hidden">
           ⚠️ DOM Structure Drifted: Button element modified to <code>#pay-now-action</code> inside <code>div.payment-drawer</code>
         </div>
       </section>
     </main>
 
+    <!-- Slide-over Cart Drawer -->
+    <div id="cart-drawer-backdrop" class="cart-drawer-backdrop hidden"></div>
+    <aside id="cart-drawer" class="cart-drawer" aria-label="Shopping Cart Drawer" aria-hidden="true">
+      <div class="drawer-header">
+        <div class="drawer-title-group">
+          <h2 class="drawer-title">Shopping Bag</h2>
+          <span id="drawer-cart-badge" class="drawer-badge">2 items</span>
+        </div>
+        <button id="cart-close-btn" class="drawer-close-btn" type="button" aria-label="Close Shopping Bag">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Free Shipping Meter -->
+      <div class="shipping-meter-container">
+        <div class="shipping-meter-text">
+          <span id="shipping-meter-label">🎉 You qualify for <strong>FREE Express Shipping</strong>!</span>
+        </div>
+        <div class="shipping-progress-track">
+          <div id="shipping-progress-bar" class="shipping-progress-bar" style="width: 100%;"></div>
+        </div>
+      </div>
+
+      <!-- Cart Items List Container -->
+      <div id="cart-items-container" class="cart-items-container">
+        <!-- Rendered by store.js -->
+      </div>
+
+      <!-- Empty Cart State -->
+      <div id="cart-empty-state" class="cart-empty-state hidden">
+        <div class="empty-icon-circle">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="8" cy="21" r="1"/>
+            <circle cx="19" cy="21" r="1"/>
+            <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
+          </svg>
+        </div>
+        <h3>Your Shopping Bag is Empty</h3>
+        <p>Explore our ergonomic technical collection to find your next essential gear.</p>
+        <button id="empty-shop-now-btn" class="btn btn-primary" type="button">Start Shopping</button>
+      </div>
+
+      <!-- Drawer Footer Summary -->
+      <div class="drawer-footer">
+        <div class="drawer-summary-breakdown">
+          <div class="drawer-line">
+            <span>Subtotal</span>
+            <span id="drawer-subtotal">$360.00</span>
+          </div>
+          <div id="drawer-discount-row" class="drawer-line discount-line hidden">
+            <span>Discount (20%)</span>
+            <span id="drawer-discount">-$72.00</span>
+          </div>
+          <div class="drawer-line">
+            <span>Shipping</span>
+            <span class="free-shipping">FREE</span>
+          </div>
+          <div class="drawer-line drawer-total">
+            <span>Total</span>
+            <span id="drawer-total">$360.00</span>
+          </div>
+        </div>
+
+        <button id="drawer-checkout-btn" class="btn btn-checkout drawer-checkout-btn" type="button">
+          Proceed to Checkout ($360.00) →
+        </button>
+        <button id="drawer-continue-btn" class="btn btn-secondary drawer-continue-btn" type="button">
+          Continue Shopping
+        </button>
+      </div>
+    </aside>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
     <footer class="store-footer">
-      <p>© 2026 AeroStyle Collective • Target Test Site for PATCHWORK Platform</p>
+      <div class="footer-content">
+        <div class="footer-brand">
+          <div class="brand-logo">
+            <span class="logo-mark">▲</span>
+            <span class="brand-name">AeroStyle Collective</span>
+          </div>
+          <p class="footer-desc">Target Test Site for PATCHWORK Platform • Autonomous Hotfix Governance Workbench</p>
+        </div>
+        <div class="footer-badges">
+          <span class="footer-pill">Platform Version: v0.1.0</span>
+          <span class="footer-pill">Demo Storefront ID: demo-store</span>
+          <span class="footer-pill">Runtime: Injected Seam</span>
+        </div>
+      </div>
+      <p class="footer-copyright">© 2026 AeroStyle Collective. All rights reserved. Designed for Visual Hotfix & Release Governance demonstrations.</p>
     </footer>
   </div>
 

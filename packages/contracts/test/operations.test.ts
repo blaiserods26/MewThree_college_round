@@ -77,6 +77,15 @@ describe("Patch Operation Allowlist Validation", () => {
     const resExpr = validatePatchOperation(dangerousExpr);
     expect(resExpr.valid).toBe(false);
     expect(resExpr.error).toContain("Dangerous CSS expression detected");
+
+    const invalidDisplayHidden: PatchOperation = {
+      type: "style.set",
+      property: "display",
+      value: "hidden",
+    };
+    const resDisplay = validatePatchOperation(invalidDisplayHidden);
+    expect(resDisplay.valid).toBe(false);
+    expect(resDisplay.error).toContain("does not accept 'hidden'");
   });
 
   it("strictly rejects dangerous attributes like onclick, onload, and javascript: links", () => {
