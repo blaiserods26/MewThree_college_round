@@ -3,6 +3,12 @@ import { Plus, X, Layers } from 'lucide-react';
 import type { OperationType, Patch } from '../types';
 import { api } from '../lib/api';
 import { useToast } from '../components/Notifications';
+import { SuggestionInput } from '../components/SuggestionInput';
+import {
+  CSS_PROPERTY_RECOMMENDATIONS,
+  HTML_TAG_RECOMMENDATIONS,
+  getPropertyValueRecommendations,
+} from '../lib/recommendations';
 
 interface NewPatchModalProps {
   isOpen: boolean;
@@ -96,11 +102,13 @@ export const NewPatchModal: React.FC<NewPatchModalProps> = ({
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '10px' }}>
               <div>
                 <label className="pw-label">Target Tag</label>
-                <input
-                  type="text"
+                <SuggestionInput
                   className="pw-input pw-input-mono"
                   value={tag}
-                  onChange={(e) => setTag(e.target.value)}
+                  onChange={(val) => setTag(val)}
+                  suggestions={HTML_TAG_RECOMMENDATIONS}
+                  placeholder="e.g. button"
+                  mono
                 />
               </div>
               <div>
@@ -132,22 +140,24 @@ export const NewPatchModal: React.FC<NewPatchModalProps> = ({
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div>
                   <label className="pw-label">CSS Property</label>
-                  <input
-                    type="text"
+                  <SuggestionInput
                     className="pw-input pw-input-mono"
                     value={property}
-                    onChange={(e) => setProperty(e.target.value)}
-                    placeholder="e.g. max-width"
+                    onChange={(val) => setProperty(val)}
+                    suggestions={CSS_PROPERTY_RECOMMENDATIONS}
+                    placeholder="e.g. display, max-width"
+                    mono
                   />
                 </div>
                 <div>
                   <label className="pw-label">Proposed Value</label>
-                  <input
-                    type="text"
+                  <SuggestionInput
                     className="pw-input pw-input-mono"
                     value={value}
-                    onChange={(e) => setValue(e.target.value)}
-                    placeholder="e.g. 100%"
+                    onChange={(val) => setValue(val)}
+                    suggestions={getPropertyValueRecommendations(property)}
+                    placeholder="e.g. none, 100%, 16px"
+                    mono
                   />
                 </div>
               </div>

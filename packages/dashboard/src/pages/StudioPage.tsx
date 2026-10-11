@@ -31,6 +31,11 @@ import type {
 import { bridge } from '../lib/bridge';
 import { api, getStorefrontUrl } from '../lib/api';
 import { useToast } from '../components/Notifications';
+import { SuggestionInput } from '../components/SuggestionInput';
+import {
+  CSS_PROPERTY_RECOMMENDATIONS,
+  getPropertyValueRecommendations,
+} from '../lib/recommendations';
 
 interface StudioPageProps {
   currentPatch: Patch | null;
@@ -588,22 +593,29 @@ export const StudioPage: React.FC<StudioPageProps> = ({
               <>
                 <div>
                   <label className="pw-label">CSS Property</label>
-                  <input
-                    type="text"
+                  <SuggestionInput
                     className="pw-input pw-input-mono"
                     value={opProperty}
-                    onChange={(e) => setOpProperty(e.target.value)}
+                    onChange={(val) => {
+                      setOpProperty(val);
+                      if (val.trim().toLowerCase() === 'display' && opValue.trim().toLowerCase() === 'hidden') {
+                        setOpValue('none');
+                      }
+                    }}
+                    suggestions={CSS_PROPERTY_RECOMMENDATIONS}
                     placeholder="e.g. display, padding, max-width"
+                    mono
                   />
                 </div>
                 <div>
                   <label className="pw-label">Proposed Value</label>
-                  <input
-                    type="text"
+                  <SuggestionInput
                     className="pw-input pw-input-mono"
                     value={opValue}
-                    onChange={(e) => setOpValue(e.target.value)}
+                    onChange={(val) => setOpValue(val)}
+                    suggestions={getPropertyValueRecommendations(opProperty)}
                     placeholder="e.g. inline-block, 12px, 100%"
+                    mono
                   />
                   {opProperty.trim().toLowerCase() === 'display' && opValue.trim().toLowerCase() === 'hidden' && (
                     <div style={{ fontSize: '11px', color: 'var(--pw-warning)', marginTop: '6px', lineHeight: 1.4, padding: '6px 8px', backgroundColor: 'rgba(234, 179, 8, 0.1)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(234, 179, 8, 0.3)' }}>

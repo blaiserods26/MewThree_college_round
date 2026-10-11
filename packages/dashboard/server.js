@@ -84,7 +84,11 @@ const server = http.createServer((req, res) => {
       return;
     }
     const ext = path.extname(targetFile);
-    res.writeHead(200, { "Content-Type": MIME_TYPES[ext] || "text/plain" });
+    const headers = { "Content-Type": MIME_TYPES[ext] || "text/plain" };
+    if (ext === ".html") {
+      headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+    }
+    res.writeHead(200, headers);
     res.end(data);
   });
 });
