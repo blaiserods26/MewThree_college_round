@@ -11,6 +11,10 @@ export interface OriginalElementState {
   attribute?: { name: string; value: string | null };
   display?: string;
   ariaHidden?: string | null;
+  insertedElement?: Element;
+  removedElement?: Element;
+  removedParent?: Element;
+  removedNextSibling?: Node | null;
 }
 
 export type MutationStatus = "applied" | "skipped" | "stale" | "failed";
@@ -136,6 +140,64 @@ export function applyPatchToDom(
         element.removeAttribute("aria-hidden");
         break;
       }
+
+      case "element.insert": {
+        const newEl = doc.createElement(op.tag);
+        newEl.setAttribute("data-patchwork-inserted", patch.id);
+
+        if (op.textContent) {
+          newEl.textContent = op.textContent;
+        } else if (op.htmlContent) {
+          newEl.innerHTML = op.htmlContent;
+        }
+
+        if (op.attributes) {
+          for (const [attr, val] of Object.entries(op.attributes)) {
+            newEl.setAttribute(attr, val);
+          }
+        }
+
+        if (op.style) {
+          for (const [prop, val] of Object.entries(op.style)) {
+            newEl.style.setProperty(prop, val);
+          }
+        }
+
+        const position = op.position || "append";
+        if (position === "append") {
+          element.appendChild(newEl);
+        } else if (position === "prepend") {
+          element.insertBefore(newEl, element.firstChild);
+        } else if (position === "before") {
+          if (element.parentNode) {
+            element.parentNode.insertBefore(newEl, element);
+          } else {
+            throw new Error("Target element has no parent node for 'before' insertion.");
+          }
+        } else if (position === "after") {
+          if (element.parentNode) {
+            element.parentNode.insertBefore(newEl, element.nextSibling);
+          } else {
+            throw new Error("Target element has no parent node for 'after' insertion.");
+          }
+        }
+
+        originalState.insertedElement = newEl;
+        break;
+      }
+
+      case "element.remove": {
+        if (!element.parentNode) {
+          throw new Error("Target element has no parent node and cannot be removed.");
+        }
+        originalState.removedElement = element;
+        originalState.removedParent = (element.parentElement || element.parentNode) as Element;
+        originalState.removedNextSibling = element.nextSibling;
+        if (element.parentNode) {
+          element.parentNode.removeChild(element);
+        }
+        break;
+      }
     }
 
     return {
@@ -163,7 +225,7 @@ export function revertPatchFromDom(
   const element = applyResult.element as HTMLElement | undefined;
   const state = applyResult.originalState;
 
-  if (!element || !state) {
+  if (!state || (!element && !state.insertedElement && !state.removedElement)) {
     return {
       patchId: applyResult.patchId,
       reverted: false,
@@ -172,42 +234,56 @@ export function revertPatchFromDom(
   }
 
   try {
-    if (state.styleProperty) {
-      if (state.styleProperty.value) {
-        element.style.setProperty(
-          state.styleProperty.property,
-          state.styleProperty.value
-        );
+    if (state.insertedElement && state.insertedElement.parentNode) {
+      state.insertedElement.parentNode.removeChild(state.insertedElement);
+    }
+
+    if (state.removedElement && state.removedParent) {
+      if (state.removedNextSibling && state.removedNextSibling.parentNode === state.removedParent) {
+        state.removedParent.insertBefore(state.removedElement, state.removedNextSibling);
       } else {
-        element.style.removeProperty(state.styleProperty.property);
+        state.removedParent.appendChild(state.removedElement);
       }
     }
 
-    if (state.textContent !== undefined) {
-      element.textContent = state.textContent;
-    }
-
-    if (state.attribute) {
-      if (state.attribute.value !== null) {
-        element.setAttribute(state.attribute.name, state.attribute.value);
-      } else {
-        element.removeAttribute(state.attribute.name);
+    if (element) {
+      if (state.styleProperty) {
+        if (state.styleProperty.value) {
+          element.style.setProperty(
+            state.styleProperty.property,
+            state.styleProperty.value
+          );
+        } else {
+          element.style.removeProperty(state.styleProperty.property);
+        }
       }
-    }
 
-    if (state.display !== undefined) {
-      if (state.display) {
-        element.style.display = state.display;
-      } else {
-        element.style.removeProperty("display");
+      if (state.textContent !== undefined) {
+        element.textContent = state.textContent;
       }
-    }
 
-    if (state.ariaHidden !== undefined) {
-      if (state.ariaHidden !== null) {
-        element.setAttribute("aria-hidden", state.ariaHidden);
-      } else {
-        element.removeAttribute("aria-hidden");
+      if (state.attribute) {
+        if (state.attribute.value !== null) {
+          element.setAttribute(state.attribute.name, state.attribute.value);
+        } else {
+          element.removeAttribute(state.attribute.name);
+        }
+      }
+
+      if (state.display !== undefined) {
+        if (state.display) {
+          element.style.display = state.display;
+        } else {
+          element.style.removeProperty("display");
+        }
+      }
+
+      if (state.ariaHidden !== undefined) {
+        if (state.ariaHidden !== null) {
+          element.setAttribute("aria-hidden", state.ariaHidden);
+        } else {
+          element.removeAttribute("aria-hidden");
+        }
       }
     }
 

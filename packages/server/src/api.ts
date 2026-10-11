@@ -381,20 +381,37 @@ export function createServer(service: PatchService, options: ApiServerOptions = 
       }
 
       // 5. AI Endpoints (Phase 8)
-      if (pathname === "/api/ai/generate-patch" && method === "POST") {
+      if ((pathname === "/api/ai/generate-patch" || pathname === "/api/ai/proposal") && method === "POST") {
         const body = await parseJsonBody(req);
-        if (!body.prompt || typeof body.prompt !== "string") {
+        const prompt = body.prompt || body.problemDescription;
+        if (!prompt || typeof prompt !== "string") {
           return sendJson(res, 400, { error: "'prompt' is required to generate an AI hotfix proposal." });
         }
+        const elementContext = body.elementContext || body.context || (body.selectorContext || body.elementTag ? {
+          tag: body.elementTag || "div",
+          selector: body.selectorContext || "#target-el",
+        } : undefined);
         const proposal = await service.generatePatchProposal({
           websiteId: body.websiteId || "demo-store",
-          prompt: body.prompt,
-          elementContext: body.elementContext || body.context,
+          prompt,
+          elementContext,
         });
+        const providerName = service.getAiProviderName();
         return sendJson(res, 200, {
-          proposal,
+          proposal: {
+            ...proposal,
+            patchName: (proposal as any).patchName || proposal.name,
+            selector: proposal.targetFingerprint?.selector,
+            elementTag: proposal.targetFingerprint?.tag,
+            operation: proposal.operation,
+            reasoning: proposal.explanation,
+            expectedImpact: "Resolved defect according to natural language instruction.",
+            confidenceScore: proposal.confidence ?? 0.95,
+            assumptions: proposal.assumptions ?? [],
+          },
           ...proposal,
-          provider: "mock",
+          provider: providerName,
+          isMock: providerName === "mock",
         });
       }
 
@@ -409,7 +426,7 @@ export function createServer(service: PatchService, options: ApiServerOptions = 
         );
         return sendJson(res, 200, {
           ...explanation,
-          provider: "mock",
+          provider: service.getAiProviderName(),
         });
       }
 
@@ -421,7 +438,7 @@ export function createServer(service: PatchService, options: ApiServerOptions = 
         const result = await service.disambiguateTarget(body.patchId, body.candidates || []);
         return sendJson(res, 200, {
           ...result,
-          provider: "mock",
+          provider: service.getAiProviderName(),
         });
       }
 

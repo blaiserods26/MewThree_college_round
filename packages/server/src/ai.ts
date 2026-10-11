@@ -21,6 +21,7 @@ export interface DisambiguateTargetInput {
 }
 
 export interface AiProvider {
+  getProviderName?(): string;
   generatePatch(input: GeneratePatchRequest): Promise<GeneratedPatchProposal>;
   explainVerification(input: ExplainVerificationInput): Promise<VerificationExplanationResult>;
   disambiguateTarget(input: DisambiguateTargetInput): Promise<TargetDisambiguationResult>;
@@ -28,9 +29,13 @@ export interface AiProvider {
 
 /**
  * Deterministic Mock AI Provider that executes offline without requiring API keys or network access.
- * Accurately parses domain intents (mobile visibility, colors, text, hides) and provides structured responses.
+ * Accurately parses domain intents (mobile visibility, colors, text, hides, inserts, removes) and provides structured responses.
  */
 export class MockAiProvider implements AiProvider {
+  public getProviderName(): string {
+    return "mock";
+  }
+
   public async generatePatch(input: GeneratePatchRequest): Promise<GeneratedPatchProposal> {
     const prompt = input.prompt.toLowerCase();
     const ctx = input.elementContext;
@@ -40,6 +45,87 @@ export class MockAiProvider implements AiProvider {
       ctx?.selector ||
       (prompt.includes("checkout") ? "#checkout-btn" : prompt.includes("banner") ? ".banner" : "#target-el");
     const entityName = prompt.includes("checkout") ? "checkout button" : tag;
+
+    // Case 0: Element deletion / removal
+    if (
+      prompt.includes("delete") ||
+      prompt.includes("remove") ||
+      prompt.includes("drop") ||
+      prompt.includes("eliminate")
+    ) {
+      return {
+        name: `Delete ${entityName} from DOM`,
+        targetFingerprint: {
+          tag,
+          selector,
+          role: ctx?.role,
+        },
+        operation: {
+          type: "element.remove",
+        },
+        explanation: `Detaches and removes element '${selector}' entirely from the live DOM hierarchy as requested.`,
+        assumptions: [
+          `Target element '${selector}' exists and is safe to detach.`,
+          "Element deletion does not break parent layout height or essential event delegation.",
+        ],
+        confidence: 0.95,
+      };
+    }
+
+    // Case 0.5: Element addition / insertion
+    if (
+      prompt.includes("add") ||
+      prompt.includes("insert") ||
+      prompt.includes("create") ||
+      prompt.includes("banner") ||
+      prompt.includes("badge") ||
+      prompt.includes("announcement") ||
+      prompt.includes("notice") ||
+      prompt.includes("new element")
+    ) {
+      const isBanner = prompt.includes("banner") || prompt.includes("announcement");
+      const insertTag = isBanner ? "div" : prompt.includes("button") ? "button" : "span";
+      const position = prompt.includes("above") || prompt.includes("before") || prompt.includes("top") ? "before" : "append";
+      const insertText = prompt.includes("sale")
+        ? "Flash Sale — Extra 25% Off Today Only!"
+        : prompt.includes("shipping")
+        ? "Free Express Shipping on Orders Over $50"
+        : "Important Notice: Exclusive Store Offer";
+
+      return {
+        name: `Insert ${insertTag} notice relative to ${selector}`,
+        targetFingerprint: {
+          tag,
+          selector,
+          role: ctx?.role,
+        },
+        operation: {
+          type: "element.insert",
+          position,
+          tag: insertTag,
+          textContent: insertText,
+          attributes: {
+            class: isBanner ? "patchwork-announcement-banner" : "patchwork-badge",
+            role: "alert",
+          },
+          style: {
+            background: "#fef08a",
+            color: "#854d0e",
+            padding: "8px 14px",
+            border: "1px solid #facc15",
+            "border-radius": "6px",
+            "font-weight": "600",
+            "text-align": "center",
+          },
+        },
+        explanation: `Inserts a new safe <${insertTag}> element with allowlisted styles and accessible alert role adjacent to '${selector}'.`,
+        assumptions: [
+          `Target element '${selector}' is present in DOM to serve as insertion anchor.`,
+          "Inserted markup adheres strictly to safe tag and attribute allowlists.",
+        ],
+        confidence: 0.96,
+      };
+    }
 
     // Case 1: Mobile visibility / display restoration
     if (
@@ -106,6 +192,44 @@ export class MockAiProvider implements AiProvider {
         explanation: `Applies crimson red (#ef4444) background to '${selector}'.`,
         assumptions: ["Element accepts CSS background-color."],
         confidence: 0.95,
+      };
+    }
+
+    if (prompt.includes("purple") || prompt.includes("violet")) {
+      return {
+        name: `Change ${tag} background to purple`,
+        targetFingerprint: {
+          tag,
+          selector,
+          role: ctx?.role,
+        },
+        operation: {
+          type: "style.set",
+          property: "background-color",
+          value: "#8b5cf6",
+        },
+        explanation: `Applies modern purple (#8b5cf6) background to '${selector}'.`,
+        assumptions: ["Element accepts CSS background-color."],
+        confidence: 0.95,
+      };
+    }
+
+    if (prompt.includes("font") || prompt.includes("size") || prompt.includes("18px")) {
+      return {
+        name: `Increase ${tag} font size to 18px`,
+        targetFingerprint: {
+          tag,
+          selector,
+          role: ctx?.role,
+        },
+        operation: {
+          type: "style.set",
+          property: "font-size",
+          value: "18px",
+        },
+        explanation: `Adjusts font size of '${selector}' to 18px for improved typography and legibility.`,
+        assumptions: ["Element accepts CSS font-size."],
+        confidence: 0.94,
       };
     }
 
@@ -292,8 +416,156 @@ export class MockAiProvider implements AiProvider {
   }
 }
 
+export interface GeminiAiProviderOptions {
+  apiKey?: string;
+  model?: string;
+  apiBaseUrl?: string;
+  fallbackProvider?: AiProvider;
+}
+
+/**
+ * Live Google Gemini AI Provider utilizing models such as gemini-3.5-flash-lite
+ * with structured JSON schema responses and strict security validation.
+ */
+export class GeminiAiProvider implements AiProvider {
+  private apiKey: string;
+  private model: string;
+  private apiBaseUrl: string;
+  private fallbackProvider: AiProvider;
+
+  constructor(options: GeminiAiProviderOptions = {}) {
+    this.apiKey = options.apiKey || process.env.GEMINI_API_KEY || "";
+    this.model = options.model || process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
+    this.apiBaseUrl = options.apiBaseUrl || "https://generativelanguage.googleapis.com";
+    this.fallbackProvider = options.fallbackProvider || new MockAiProvider();
+  }
+
+  public getProviderName(): string {
+    return this.apiKey ? this.model : "mock";
+  }
+
+  public async generatePatch(input: GeneratePatchRequest): Promise<GeneratedPatchProposal> {
+    if (!this.apiKey) {
+      return this.fallbackProvider.generatePatch(input);
+    }
+
+    try {
+      const systemInstruction = `You are PATCHWORK AI Copilot, an enterprise-grade DOM hotfix engine.
+Translate the user's natural language request into a single atomic, allowlisted DOM patch proposal.
+
+ALLOWED OPERATIONS:
+1. "style.set": { "type": "style.set", "property": "<css property>", "value": "<css value>" }
+   Valid CSS properties: display, visibility, opacity, color, background, background-color, border, border-color, border-width, border-radius, margin, padding, width, height, font-size, font-weight, line-height, text-align, z-index, position, top, bottom, left, right, flex-direction, align-items, justify-content, gap.
+2. "text.set": { "type": "text.set", "value": "<plain text>" }
+3. "attribute.set": { "type": "attribute.set", "name": "<attribute name>", "value": "<attribute value>" }
+   Safe attributes: aria-*, title, alt, disabled, placeholder, target, rel, role, class, id, src, href.
+4. "element.hide": { "type": "element.hide" }
+5. "element.show": { "type": "element.show", "display": "<css display>" }
+6. "element.insert": { "type": "element.insert", "position": "append"|"prepend"|"before"|"after", "tag": "<safe tag>", "textContent": "<text>", "attributes": { ... }, "style": { ... } }
+   Allowed tags for insert: div, span, p, a, button, h1, h2, h3, h4, h5, h6, section, article, header, footer, aside, img, ul, ol, li, label, badge, table, tr, td, th.
+   NO script tags, NO iframe, NO inline on* event handlers, NO dangerous CSS expressions.
+7. "element.remove": { "type": "element.remove" }
+
+Output MUST be a valid JSON object with:
+{
+  "name": "Short descriptive title",
+  "targetFingerprint": {
+    "tag": "element tag",
+    "selector": "CSS selector to target or anchor to",
+    "role": "optional ARIA role"
+  },
+  "operation": <PatchOperation>,
+  "explanation": "Why this operation solves the problem",
+  "assumptions": ["Assumptions made"],
+  "confidence": 0.95
+}`;
+
+      const userContent = `User Prompt: "${input.prompt}"
+Element Context: ${JSON.stringify(input.elementContext || {})}
+Website ID: ${input.websiteId}`;
+
+      const endpoint = `${this.apiBaseUrl}/v1beta/models/${encodeURIComponent(this.model)}:generateContent?key=${encodeURIComponent(this.apiKey)}`;
+
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: `${systemInstruction}\n\n${userContent}` }],
+            },
+          ],
+          generationConfig: {
+            responseMimeType: "application/json",
+            temperature: 0.1,
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text().catch(() => "");
+        console.warn(`[GeminiAiProvider] Gemini API request failed (${res.status}): ${errText}. Falling back to mock engine.`);
+        return this.fallbackProvider.generatePatch(input);
+      }
+
+      const data: any = await res.json();
+      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!rawText) {
+        return this.fallbackProvider.generatePatch(input);
+      }
+
+      const parsed = JSON.parse(rawText);
+      const proposal: GeneratedPatchProposal = {
+        name: parsed.name || `Hotfix: ${input.prompt.slice(0, 30)}`,
+        targetFingerprint: {
+          tag: parsed.targetFingerprint?.tag || input.elementContext?.tag || "div",
+          selector: parsed.targetFingerprint?.selector || input.elementContext?.selector || "#target-el",
+          role: parsed.targetFingerprint?.role || input.elementContext?.role,
+        },
+        operation: parsed.operation,
+        explanation: parsed.explanation || `Applied change based on prompt: ${input.prompt}`,
+        assumptions: Array.isArray(parsed.assumptions) ? parsed.assumptions : [],
+        confidence: typeof parsed.confidence === "number" ? parsed.confidence : 0.92,
+      };
+
+      return proposal;
+    } catch (err: any) {
+      console.warn(`[GeminiAiProvider] Failed to generate proposal via ${this.model}: ${err.message}. Falling back to mock engine.`);
+      return this.fallbackProvider.generatePatch(input);
+    }
+  }
+
+  public async explainVerification(input: ExplainVerificationInput): Promise<VerificationExplanationResult> {
+    return this.fallbackProvider.explainVerification(input);
+  }
+
+  public async disambiguateTarget(input: DisambiguateTargetInput): Promise<TargetDisambiguationResult> {
+    return this.fallbackProvider.disambiguateTarget(input);
+  }
+}
+
+export function createAiProviderFromEnv(): AiProvider {
+  const providerType = (process.env.AI_PROVIDER || "mock").toLowerCase();
+  const apiKey = process.env.GEMINI_API_KEY;
+  const model = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
+
+  if (providerType === "gemini" || apiKey) {
+    return new GeminiAiProvider({
+      apiKey,
+      model,
+      fallbackProvider: new MockAiProvider(),
+    });
+  }
+  return new MockAiProvider();
+}
+
 export class DefaultAiService {
-  constructor(private provider: AiProvider = new MockAiProvider()) {}
+  constructor(private provider: AiProvider = createAiProviderFromEnv()) {}
+
+  public getProviderName(): string {
+    return this.provider.getProviderName ? this.provider.getProviderName() : "mock";
+  }
 
   public async generatePatchProposal(input: GeneratePatchRequest): Promise<GeneratedPatchProposal> {
     if (!input.prompt || !input.prompt.trim()) {

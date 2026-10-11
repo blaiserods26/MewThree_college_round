@@ -15,6 +15,8 @@ export type OperationType =
   | 'class.add'
   | 'class.remove'
   | 'element.hide'
+  | 'element.show'
+  | 'element.insert'
   | 'element.remove';
 
 export interface PatchOperation {
@@ -23,6 +25,13 @@ export interface PatchOperation {
   value?: string;
   name?: string;
   className?: string;
+  display?: string;
+  position?: 'append' | 'prepend' | 'before' | 'after';
+  tag?: string;
+  textContent?: string;
+  htmlContent?: string;
+  attributes?: Record<string, string>;
+  style?: Record<string, string>;
 }
 
 export interface TargetFingerprint {

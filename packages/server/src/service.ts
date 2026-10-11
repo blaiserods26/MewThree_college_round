@@ -826,6 +826,10 @@ export class PatchService {
   // AI Assistive Enhancements (Phase 8)
   // ---------------------------------------------------------------------------
 
+  public getAiProviderName(): string {
+    return this.aiService.getProviderName();
+  }
+
   public async generatePatchProposal(input: GeneratePatchRequest): Promise<GeneratedPatchProposal> {
     return this.aiService.generatePatchProposal(input);
   }

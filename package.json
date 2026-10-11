@@ -7,7 +7,7 @@
     "packages/*"
   ],
   "scripts": {
-    "test": "node --import ./test-register.mjs --import tsx --test packages/contracts/test/*.test.ts packages/verification/test/*.test.ts packages/runtime/test/*.test.ts packages/server/test/*.test.ts packages/dashboard/test/*.test.ts",
+    "test": "node run-tests.mjs",
     "typecheck": "npm run typecheck --workspace=packages/contracts && npm run build --workspace=packages/contracts && npm run typecheck --workspace=packages/verification && npm run build --workspace=packages/verification && npm run typecheck --workspace=packages/server && npm run typecheck --workspace=packages/runtime && npm run typecheck --workspace=packages/dashboard",
     "build": "npm run build --workspace=packages/contracts && npm run build --workspace=packages/verification && npm run build --workspace=packages/server && npm run build --workspace=packages/runtime && npm run build --workspace=packages/dashboard",
     "demo:reset": "npm run reset --workspace=packages/server",

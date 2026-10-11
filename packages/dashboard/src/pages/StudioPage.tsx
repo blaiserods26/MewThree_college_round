@@ -19,6 +19,7 @@ import {
   Copy,
   Layers,
   ExternalLink,
+  Sparkles,
 } from 'lucide-react';
 import type {
   Patch,
@@ -76,6 +77,15 @@ export const StudioPage: React.FC<StudioPageProps> = ({
   const [opValue, setOpValue] = useState(
     currentPatch?.operation?.value || 'inline-block'
   );
+  const [insertTag, setInsertTag] = useState(currentPatch?.operation?.tag || 'div');
+  const [insertPosition, setInsertPosition] = useState<'append' | 'prepend' | 'before' | 'after'>(
+    currentPatch?.operation?.position || 'before'
+  );
+  const [insertText, setInsertText] = useState(
+    currentPatch?.operation?.textContent || 'Important Notice: Limited Time Free Shipping!'
+  );
+  const [studioPrompt, setStudioPrompt] = useState('');
+  const [isPromptingAi, setIsPromptingAi] = useState(false);
 
   // Sync state when currentPatch changes
   useEffect(() => {
@@ -87,6 +97,9 @@ export const StudioPage: React.FC<StudioPageProps> = ({
       setOpType(currentPatch.operation?.type || 'style.set');
       setOpProperty(currentPatch.operation?.property || 'display');
       setOpValue(currentPatch.operation?.value || 'inline-block');
+      if (currentPatch.operation?.tag) setInsertTag(currentPatch.operation.tag);
+      if (currentPatch.operation?.position) setInsertPosition(currentPatch.operation.position);
+      if (currentPatch.operation?.textContent) setInsertText(currentPatch.operation.textContent);
       onLoadEvidence(currentPatch.id);
     }
   }, [currentPatch]);
@@ -140,16 +153,44 @@ export const StudioPage: React.FC<StudioPageProps> = ({
     }
   };
 
+  const buildCurrentOperation = (): PatchOperation => {
+    if (opType === 'element.insert') {
+      return {
+        type: 'element.insert',
+        position: insertPosition,
+        tag: insertTag,
+        textContent: insertText,
+        attributes: { class: 'patchwork-announcement-banner', role: 'alert' },
+        style: {
+          background: '#fef08a',
+          color: '#854d0e',
+          padding: '8px 14px',
+          border: '1px solid #facc15',
+          'border-radius': '6px',
+          'font-weight': '600',
+          'text-align': 'center',
+        },
+      };
+    }
+    if (opType === 'element.remove') {
+      return { type: 'element.remove' };
+    }
+    if (opType === 'text.set') {
+      return { type: 'text.set', value: opValue };
+    }
+    return {
+      type: opType,
+      property: opProperty,
+      value: opValue,
+    };
+  };
+
   const handleApplyPreview = () => {
     if (opType === 'style.set' && opProperty.trim().toLowerCase() === 'display' && opValue.trim().toLowerCase() === 'hidden') {
       showToast('Invalid CSS: "display" does not accept "hidden". Use "none" (display: none), "visibility: hidden", or operation "element.hide".', 'warning');
       return;
     }
-    const op: PatchOperation = {
-      type: opType,
-      property: opProperty,
-      value: opValue,
-    };
+    const op = buildCurrentOperation();
     const fp: TargetFingerprint = selectedFingerprint
       ? {
           ...selectedFingerprint,
@@ -171,6 +212,47 @@ export const StudioPage: React.FC<StudioPageProps> = ({
     showToast('Storefront canvas preview restored to baseline', 'info');
   };
 
+  const handleStudioAiPrompt = async (customPrompt?: string) => {
+    const promptToUse = customPrompt || studioPrompt;
+    if (!promptToUse.trim()) {
+      showToast('Please enter a natural language prompt', 'warning');
+      return;
+    }
+    setIsPromptingAi(true);
+    try {
+      const res = await api.getAiProposal({
+        websiteId: 'demo-store',
+        problemDescription: promptToUse,
+        selectorContext: selectedSelector,
+        elementTag: selectedTag,
+      });
+      const proposal = res.proposal;
+      setPatchName(proposal.patchName);
+      setSelectedSelector(proposal.selector);
+      setSelectedTag(proposal.elementTag);
+      setOpType(proposal.operation.type);
+      if (proposal.operation.property) setOpProperty(proposal.operation.property);
+      if (proposal.operation.value) setOpValue(proposal.operation.value);
+      if (proposal.operation.tag) setInsertTag(proposal.operation.tag);
+      if (proposal.operation.position) setInsertPosition(proposal.operation.position);
+      if (proposal.operation.textContent) setInsertText(proposal.operation.textContent);
+
+      bridge.applyLivePreview({
+        operation: proposal.operation,
+        targetFingerprint: { tag: proposal.elementTag, selector: proposal.selector },
+      });
+      setIsPreviewActive(true);
+      showToast(
+        `AI proposal applied (${res.isMock ? 'Heuristic Fallback' : 'Gemini 3.5 Flash Lite'}): ${proposal.patchName}`,
+        'success'
+      );
+    } catch (err: any) {
+      showToast(`AI prompt failed: ${err.message}`, 'error');
+    } finally {
+      setIsPromptingAi(false);
+    }
+  };
+
   const handleSaveDraft = async () => {
     if (opType === 'style.set' && opProperty.trim().toLowerCase() === 'display' && opValue.trim().toLowerCase() === 'hidden') {
       showToast('Invalid CSS: "display" does not accept "hidden". Use "none" (display: none), "visibility: hidden", or operation "element.hide".', 'warning');
@@ -178,11 +260,7 @@ export const StudioPage: React.FC<StudioPageProps> = ({
     }
     setIsSaving(true);
     try {
-      const op: PatchOperation = {
-        type: opType,
-        property: opProperty,
-        value: opValue,
-      };
+      const op = buildCurrentOperation();
       const fp: TargetFingerprint = selectedFingerprint
         ? {
             ...selectedFingerprint,
@@ -425,6 +503,45 @@ export const StudioPage: React.FC<StudioPageProps> = ({
         </div>
       </div>
 
+      {/* Gemini AI Natural Language Prompt Bar */}
+      <div
+        style={{
+          padding: '8px 16px',
+          backgroundColor: 'var(--pw-surface-2)',
+          borderBottom: '1px solid var(--pw-border)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--pw-accent)', flexShrink: 0 }}>
+          <Sparkles size={14} />
+          <span style={{ fontSize: '12px', fontWeight: 600 }}>Gemini 3.5 Flash Lite</span>
+        </div>
+        <div style={{ flex: 1, display: 'flex', gap: '8px' }}>
+          <input
+            type="text"
+            className="pw-input"
+            value={studioPrompt}
+            onChange={(e) => setStudioPrompt(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleStudioAiPrompt();
+            }}
+            placeholder='Prompt in natural language: e.g. "Add a free shipping banner above cart", "Delete the promo badge", "Make button green"...'
+            style={{ height: '30px', fontSize: '12px' }}
+          />
+          <button
+            className="pw-btn pw-btn-primary pw-btn-sm"
+            onClick={() => handleStudioAiPrompt()}
+            disabled={isPromptingAi || !studioPrompt.trim()}
+            style={{ height: '30px', flexShrink: 0 }}
+          >
+            <Sparkles size={12} />
+            <span>{isPromptingAi ? 'Synthesizing...' : 'Prompt AI & Preview'}</span>
+          </button>
+        </div>
+      </div>
+
       {/* Main Workspace: Central Canvas + Right Inspector */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
         {/* Central Website Canvas */}
@@ -578,11 +695,60 @@ export const StudioPage: React.FC<StudioPageProps> = ({
                 <option value="style.set">style.set (Safe CSS Property)</option>
                 <option value="text.set">text.set (Safe Text Content)</option>
                 <option value="attribute.set">attribute.set (DOM Attribute)</option>
+                <option value="element.insert">element.insert (Add New Element)</option>
+                <option value="element.remove">element.remove (Delete Element)</option>
                 <option value="element.hide">element.hide (Hide Visibility)</option>
+                <option value="element.show">element.show (Restore Visibility)</option>
                 <option value="class.add">class.add (Append CSS Class)</option>
                 <option value="class.remove">class.remove (Remove CSS Class)</option>
               </select>
             </div>
+
+            {opType === 'element.insert' && (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div>
+                    <label className="pw-label">Tag Name</label>
+                    <input
+                      type="text"
+                      className="pw-input pw-input-mono"
+                      value={insertTag}
+                      onChange={(e) => setInsertTag(e.target.value)}
+                      placeholder="div, span, button"
+                    />
+                  </div>
+                  <div>
+                    <label className="pw-label">Position</label>
+                    <select
+                      className="pw-select"
+                      value={insertPosition}
+                      onChange={(e) => setInsertPosition(e.target.value as any)}
+                    >
+                      <option value="before">before (Insert Before Target)</option>
+                      <option value="after">after (Insert After Target)</option>
+                      <option value="append">append (Append as Child)</option>
+                      <option value="prepend">prepend (Prepend as Child)</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="pw-label">Content / Text</label>
+                  <input
+                    type="text"
+                    className="pw-input"
+                    value={insertText}
+                    onChange={(e) => setInsertText(e.target.value)}
+                    placeholder="Text content for new element"
+                  />
+                </div>
+              </>
+            )}
+
+            {opType === 'element.remove' && (
+              <div style={{ padding: '10px', backgroundColor: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: 'var(--radius-sm)', fontSize: '12px', color: 'var(--pw-text-muted)' }}>
+                Target element <strong>{selectedSelector}</strong> will be cleanly detached and deleted from the live DOM hierarchy. Reversion restores the element to its original parent and sibling index.
+              </div>
+            )}
 
             {opType === 'style.set' && (
               <>

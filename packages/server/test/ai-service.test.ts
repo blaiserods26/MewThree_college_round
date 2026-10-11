@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { JsonFileStore } from "../src/store.js";
 import { PatchService } from "../src/service.js";
-import { MockAiProvider, DefaultAiService } from "../src/ai.js";
+import { MockAiProvider, DefaultAiService, GeminiAiProvider } from "../src/ai.js";
 import type { Patch, VerificationRun } from "@patchwork/contracts";
 
 const TEST_DB_PATH = path.join(import.meta.dirname, "test-ai-service-db.json");
@@ -167,5 +167,118 @@ describe("AI Service & Mock Engine", () => {
     expect(result.candidateRankings[0].selector).toBe("#pay-now-action");
     expect(result.candidateRankings[0].rank).toBe(1);
     expect(result.reasoning).toContain("Complete Order");
+  });
+
+  it("generates element.insert proposal from prompt requesting to add a banner", async () => {
+    const provider = new MockAiProvider();
+    const aiService = new DefaultAiService(provider);
+
+    const proposal = await aiService.generatePatchProposal({
+      websiteId: "demo-store",
+      prompt: "Add a free shipping announcement banner above the checkout summary",
+      elementContext: {
+        tag: "div",
+        selector: "#checkout-summary",
+      },
+    });
+
+    expect(proposal.operation.type).toBe("element.insert");
+    const insertOp = proposal.operation as any;
+    expect(insertOp.tag).toBe("div");
+    expect(insertOp.position).toBe("before");
+    expect(insertOp.textContent).toContain("Shipping");
+    expect(proposal.targetFingerprint.selector).toBe("#checkout-summary");
+  });
+
+  it("generates element.remove proposal from prompt requesting to delete an element", async () => {
+    const provider = new MockAiProvider();
+    const aiService = new DefaultAiService(provider);
+
+    const proposal = await aiService.generatePatchProposal({
+      websiteId: "demo-store",
+      prompt: "Delete the seasonal holiday banner from the page",
+      elementContext: {
+        tag: "div",
+        selector: ".holiday-banner",
+      },
+    });
+
+    expect(proposal.operation.type).toBe("element.remove");
+    expect(proposal.name).toContain("Delete");
+    expect(proposal.targetFingerprint.selector).toBe(".holiday-banner");
+  });
+
+  it("GeminiAiProvider falls back gracefully when API key is missing or invalid", async () => {
+    const gemini = new GeminiAiProvider({
+      apiKey: "",
+      model: "gemini-3.5-flash-lite",
+    });
+
+    expect(gemini.getProviderName()).toBe("mock");
+
+    const proposal = await gemini.generatePatch({
+      websiteId: "demo-store",
+      prompt: "Change checkout button background to emerald green",
+      elementContext: { tag: "button", selector: "#checkout-btn" },
+    });
+
+    expect(proposal.operation.type).toBe("style.set");
+    expect((proposal.operation as any).value).toBe("#10b981");
+  });
+
+  it("GeminiAiProvider parses structured JSON responses from model endpoint", async () => {
+    const originalFetch = globalThis.fetch;
+    try {
+      globalThis.fetch = async (url: any, init: any) => {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            candidates: [
+              {
+                content: {
+                  parts: [
+                    {
+                      text: JSON.stringify({
+                        name: "Add Promo Announcement",
+                        targetFingerprint: { tag: "header", selector: "header" },
+                        operation: {
+                          type: "element.insert",
+                          tag: "div",
+                          position: "prepend",
+                          textContent: "Cyber Week Sale!",
+                        },
+                        explanation: "Adds promotional banner at top of header",
+                        assumptions: ["Header exists"],
+                        confidence: 0.98,
+                      }),
+                    },
+                  ],
+                },
+              },
+            ],
+          }),
+        } as any;
+      };
+
+      const gemini = new GeminiAiProvider({
+        apiKey: "fake-key-for-test",
+        model: "gemini-3.5-flash-lite",
+      });
+
+      expect(gemini.getProviderName()).toBe("gemini-3.5-flash-lite");
+
+      const proposal = await gemini.generatePatch({
+        websiteId: "demo-store",
+        prompt: "Add a Cyber Week banner inside header",
+      });
+
+      expect(proposal.name).toBe("Add Promo Announcement");
+      expect(proposal.operation.type).toBe("element.insert");
+      expect((proposal.operation as any).textContent).toBe("Cyber Week Sale!");
+      expect(proposal.confidence).toBe(0.98);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 });

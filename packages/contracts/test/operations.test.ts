@@ -117,4 +117,61 @@ describe("Patch Operation Allowlist Validation", () => {
     expect(res.valid).toBe(false);
     expect(res.error).toContain("Unsupported operation type");
   });
+
+  it("approves valid element.insert operations and rejects dangerous ones", () => {
+    const validInsert: PatchOperation = {
+      type: "element.insert",
+      tag: "div",
+      position: "before",
+      textContent: "Important Flash Sale Announcement",
+      attributes: {
+        class: "promo-banner",
+        role: "alert",
+      },
+      style: {
+        background: "#fef08a",
+        color: "#854d0e",
+      },
+    };
+    expect(validatePatchOperation(validInsert).valid).toBe(true);
+
+    // Rejects forbidden/dangerous tags
+    const scriptInsert: PatchOperation = {
+      type: "element.insert",
+      tag: "script",
+      textContent: "alert(1)",
+    } as any;
+    const resScript = validatePatchOperation(scriptInsert);
+    expect(resScript.valid).toBe(false);
+    expect(resScript.error).toContain("Disallowed tag for element.insert");
+
+    // Rejects inline event handler attributes
+    const handlerInsert: PatchOperation = {
+      type: "element.insert",
+      tag: "button",
+      attributes: {
+        onclick: "alert(1)",
+      },
+    } as any;
+    const resHandler = validatePatchOperation(handlerInsert);
+    expect(resHandler.valid).toBe(false);
+    expect(resHandler.error).toContain("inline event handlers are forbidden");
+
+    // Rejects dangerous HTML content
+    const dangerousHtmlInsert: PatchOperation = {
+      type: "element.insert",
+      tag: "div",
+      htmlContent: "<img src=x onerror=alert(1)>",
+    };
+    const resHtml = validatePatchOperation(dangerousHtmlInsert);
+    expect(resHtml.valid).toBe(false);
+    expect(resHtml.error).toContain("Dangerous HTML content detected");
+  });
+
+  it("approves valid element.remove operations", () => {
+    const removeOp: PatchOperation = {
+      type: "element.remove",
+    };
+    expect(validatePatchOperation(removeOp).valid).toBe(true);
+  });
 });

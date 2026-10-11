@@ -56,7 +56,53 @@ var ALLOWED_ATTRIBUTES = /* @__PURE__ */ new Set([
   "aria-disabled",
   "aria-expanded",
   "aria-selected",
-  "href"
+  "href",
+  "src",
+  "class",
+  "id",
+  "name",
+  "type"
+]);
+var ALLOWED_INSERT_TAGS = /* @__PURE__ */ new Set([
+  "div",
+  "span",
+  "p",
+  "a",
+  "button",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "section",
+  "article",
+  "header",
+  "footer",
+  "aside",
+  "img",
+  "ul",
+  "ol",
+  "li",
+  "label",
+  "small",
+  "strong",
+  "em",
+  "b",
+  "i",
+  "badge",
+  "table",
+  "tr",
+  "td",
+  "th",
+  "tbody",
+  "thead"
+]);
+var ALLOWED_INSERT_POSITIONS = /* @__PURE__ */ new Set([
+  "append",
+  "prepend",
+  "before",
+  "after"
 ]);
 var DANGEROUS_CSS_PATTERNS = [
   /expression\s*\(/i,
@@ -135,6 +181,79 @@ function validatePatchOperation(op) {
       if (op.display !== void 0 && typeof op.display !== "string") {
         return { valid: false, error: "Display value must be a string." };
       }
+      return { valid: true };
+    }
+    case "element.insert": {
+      if (!op.tag || typeof op.tag !== "string") {
+        return { valid: false, error: "Element insert requires a valid tag name." };
+      }
+      const tagLower = op.tag.toLowerCase().trim();
+      if (!ALLOWED_INSERT_TAGS.has(tagLower)) {
+        return { valid: false, error: `Disallowed tag for element.insert: '<${op.tag}>'. Arbitrary or dangerous tags are forbidden.` };
+      }
+      if (op.position !== void 0) {
+        if (typeof op.position !== "string" || !ALLOWED_INSERT_POSITIONS.has(op.position.toLowerCase().trim())) {
+          return { valid: false, error: `Invalid insert position '${op.position}'. Allowed: append, prepend, before, after.` };
+        }
+      }
+      if (op.textContent !== void 0 && typeof op.textContent !== "string") {
+        return { valid: false, error: "Element insert textContent must be a string." };
+      }
+      if (op.htmlContent !== void 0) {
+        if (typeof op.htmlContent !== "string") {
+          return { valid: false, error: "Element insert htmlContent must be a string." };
+        }
+        const dangerousHtmlRegex = /<script|javascript:|<iframe|<object|<embed|<form|onerror\s*=|onload\s*=|onclick\s*=/i;
+        if (dangerousHtmlRegex.test(op.htmlContent)) {
+          return { valid: false, error: "Dangerous HTML content detected in element.insert htmlContent." };
+        }
+      }
+      if (op.attributes !== void 0) {
+        if (typeof op.attributes !== "object" || op.attributes === null) {
+          return { valid: false, error: "Element insert attributes must be an object." };
+        }
+        for (const [attrName, attrValue] of Object.entries(op.attributes)) {
+          const lowerName = attrName.toLowerCase().trim();
+          if (lowerName.startsWith("on")) {
+            return { valid: false, error: `Disallowed attribute '${attrName}': inline event handlers are forbidden.` };
+          }
+          const isAria = lowerName.startsWith("aria-");
+          const isData = lowerName.startsWith("data-");
+          if (!ALLOWED_ATTRIBUTES.has(lowerName) && !isAria && !isData) {
+            return { valid: false, error: `Disallowed attribute '${attrName}' on element.insert.` };
+          }
+          if (typeof attrValue !== "string") {
+            return { valid: false, error: `Attribute value for '${attrName}' must be a string.` };
+          }
+          for (const pattern of DANGEROUS_ATTR_PATTERNS) {
+            if (pattern.test(attrValue.trim())) {
+              return { valid: false, error: `Disallowed attribute value for '${attrName}'.` };
+            }
+          }
+        }
+      }
+      if (op.style !== void 0) {
+        if (typeof op.style !== "object" || op.style === null) {
+          return { valid: false, error: "Element insert style must be an object." };
+        }
+        for (const [propName, propValue] of Object.entries(op.style)) {
+          const propLower = propName.toLowerCase().trim();
+          if (!ALLOWED_STYLE_PROPERTIES.has(propLower)) {
+            return { valid: false, error: `Disallowed CSS property '${propName}' in element.insert style.` };
+          }
+          if (typeof propValue !== "string") {
+            return { valid: false, error: `Style value for '${propName}' must be a string.` };
+          }
+          for (const pattern of DANGEROUS_CSS_PATTERNS) {
+            if (pattern.test(propValue)) {
+              return { valid: false, error: "Dangerous CSS expression detected in style value." };
+            }
+          }
+        }
+      }
+      return { valid: true };
+    }
+    case "element.remove": {
       return { valid: true };
     }
     default: {
@@ -227,6 +346,57 @@ function applyPatchToDom(patch, doc = document) {
         element.removeAttribute("aria-hidden");
         break;
       }
+      case "element.insert": {
+        const newEl = doc.createElement(op.tag);
+        newEl.setAttribute("data-patchwork-inserted", patch.id);
+        if (op.textContent) {
+          newEl.textContent = op.textContent;
+        } else if (op.htmlContent) {
+          newEl.innerHTML = op.htmlContent;
+        }
+        if (op.attributes) {
+          for (const [attr, val] of Object.entries(op.attributes)) {
+            newEl.setAttribute(attr, val);
+          }
+        }
+        if (op.style) {
+          for (const [prop, val] of Object.entries(op.style)) {
+            newEl.style.setProperty(prop, val);
+          }
+        }
+        const position = op.position || "append";
+        if (position === "append") {
+          element.appendChild(newEl);
+        } else if (position === "prepend") {
+          element.insertBefore(newEl, element.firstChild);
+        } else if (position === "before") {
+          if (element.parentNode) {
+            element.parentNode.insertBefore(newEl, element);
+          } else {
+            throw new Error("Target element has no parent node for 'before' insertion.");
+          }
+        } else if (position === "after") {
+          if (element.parentNode) {
+            element.parentNode.insertBefore(newEl, element.nextSibling);
+          } else {
+            throw new Error("Target element has no parent node for 'after' insertion.");
+          }
+        }
+        originalState.insertedElement = newEl;
+        break;
+      }
+      case "element.remove": {
+        if (!element.parentNode) {
+          throw new Error("Target element has no parent node and cannot be removed.");
+        }
+        originalState.removedElement = element;
+        originalState.removedParent = element.parentElement || element.parentNode;
+        originalState.removedNextSibling = element.nextSibling;
+        if (element.parentNode) {
+          element.parentNode.removeChild(element);
+        }
+        break;
+      }
     }
     return {
       patchId: patch.id,
@@ -245,7 +415,7 @@ function applyPatchToDom(patch, doc = document) {
 function revertPatchFromDom(applyResult, doc = document) {
   const element = applyResult.element;
   const state = applyResult.originalState;
-  if (!element || !state) {
+  if (!state || !element && !state.insertedElement && !state.removedElement) {
     return {
       patchId: applyResult.patchId,
       reverted: false,
@@ -253,38 +423,50 @@ function revertPatchFromDom(applyResult, doc = document) {
     };
   }
   try {
-    if (state.styleProperty) {
-      if (state.styleProperty.value) {
-        element.style.setProperty(
-          state.styleProperty.property,
-          state.styleProperty.value
-        );
+    if (state.insertedElement && state.insertedElement.parentNode) {
+      state.insertedElement.parentNode.removeChild(state.insertedElement);
+    }
+    if (state.removedElement && state.removedParent) {
+      if (state.removedNextSibling && state.removedNextSibling.parentNode === state.removedParent) {
+        state.removedParent.insertBefore(state.removedElement, state.removedNextSibling);
       } else {
-        element.style.removeProperty(state.styleProperty.property);
+        state.removedParent.appendChild(state.removedElement);
       }
     }
-    if (state.textContent !== void 0) {
-      element.textContent = state.textContent;
-    }
-    if (state.attribute) {
-      if (state.attribute.value !== null) {
-        element.setAttribute(state.attribute.name, state.attribute.value);
-      } else {
-        element.removeAttribute(state.attribute.name);
+    if (element) {
+      if (state.styleProperty) {
+        if (state.styleProperty.value) {
+          element.style.setProperty(
+            state.styleProperty.property,
+            state.styleProperty.value
+          );
+        } else {
+          element.style.removeProperty(state.styleProperty.property);
+        }
       }
-    }
-    if (state.display !== void 0) {
-      if (state.display) {
-        element.style.display = state.display;
-      } else {
-        element.style.removeProperty("display");
+      if (state.textContent !== void 0) {
+        element.textContent = state.textContent;
       }
-    }
-    if (state.ariaHidden !== void 0) {
-      if (state.ariaHidden !== null) {
-        element.setAttribute("aria-hidden", state.ariaHidden);
-      } else {
-        element.removeAttribute("aria-hidden");
+      if (state.attribute) {
+        if (state.attribute.value !== null) {
+          element.setAttribute(state.attribute.name, state.attribute.value);
+        } else {
+          element.removeAttribute(state.attribute.name);
+        }
+      }
+      if (state.display !== void 0) {
+        if (state.display) {
+          element.style.display = state.display;
+        } else {
+          element.style.removeProperty("display");
+        }
+      }
+      if (state.ariaHidden !== void 0) {
+        if (state.ariaHidden !== null) {
+          element.setAttribute("aria-hidden", state.ariaHidden);
+        } else {
+          element.removeAttribute("aria-hidden");
+        }
       }
     }
     return { patchId: applyResult.patchId, reverted: true };

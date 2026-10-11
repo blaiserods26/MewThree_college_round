@@ -151,4 +151,84 @@ describe("Patch Runtime Safe DOM Mutation Engine", () => {
     expect(result.status).toBe("failed");
     expect(result.error).toContain("Disallowed attribute");
   });
+
+  it("applies element.insert and cleanly reverts it", () => {
+    const insertPatch: Patch = {
+      id: "P-INSERT-BANNER",
+      websiteId: "demo-store",
+      name: "Insert promotional banner",
+      status: "published",
+      currentVersion: 1,
+      versions: [],
+      targetFingerprint: {
+        tag: "div",
+        selector: "#checkout-summary",
+      },
+      operation: {
+        type: "element.insert",
+        position: "before",
+        tag: "div",
+        textContent: "Limited Time Free Shipping!",
+        attributes: {
+          class: "promo-alert",
+          role: "alert",
+        },
+        style: {
+          color: "red",
+          background: "yellow",
+        },
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      createdBy: "dev-1",
+    };
+
+    const result = applyPatchToDom(insertPatch, document);
+    expect(result.status).toBe("applied");
+
+    const inserted = document.querySelector(".promo-alert") as HTMLElement;
+    expect(inserted).not.toBeNull();
+    expect(inserted.textContent).toBe("Limited Time Free Shipping!");
+    expect(inserted.getAttribute("data-patchwork-inserted")).toBe("P-INSERT-BANNER");
+    expect(inserted.style.color).toBe("red");
+
+    // Revert patch
+    const revertResult = revertPatchFromDom(result, document);
+    expect(revertResult.reverted).toBe(true);
+    expect(document.querySelector(".promo-alert")).toBeNull();
+  });
+
+  it("applies element.remove and cleanly restores the element on revert", () => {
+    const removePatch: Patch = {
+      id: "P-REMOVE-BTN",
+      websiteId: "demo-store",
+      name: "Remove checkout button",
+      status: "published",
+      currentVersion: 1,
+      versions: [],
+      targetFingerprint: {
+        tag: "button",
+        selector: "#checkout-btn",
+      },
+      operation: {
+        type: "element.remove",
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      createdBy: "dev-1",
+    };
+
+    expect(document.getElementById("checkout-btn")).not.toBeNull();
+
+    const result = applyPatchToDom(removePatch, document);
+    expect(result.status).toBe("applied");
+    expect(document.getElementById("checkout-btn")).toBeNull();
+
+    // Revert patch
+    const revertResult = revertPatchFromDom(result, document);
+    expect(revertResult.reverted).toBe(true);
+    const restored = document.getElementById("checkout-btn");
+    expect(restored).not.toBeNull();
+    expect(restored?.parentElement?.id).toBe("checkout-summary");
+  });
 });

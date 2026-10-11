@@ -71,7 +71,9 @@ export type PatchOperationType =
   | "text.set"
   | "attribute.set"
   | "element.hide"
-  | "element.show";
+  | "element.show"
+  | "element.insert"
+  | "element.remove";
 
 export interface StyleSetOperation {
   type: "style.set";
@@ -99,12 +101,30 @@ export interface ElementShowOperation {
   display?: string;
 }
 
+export type InsertPosition = "append" | "prepend" | "before" | "after";
+
+export interface ElementInsertOperation {
+  type: "element.insert";
+  position?: InsertPosition;
+  tag: string;
+  textContent?: string;
+  htmlContent?: string;
+  attributes?: Record<string, string>;
+  style?: Record<string, string>;
+}
+
+export interface ElementRemoveOperation {
+  type: "element.remove";
+}
+
 export type PatchOperation =
   | StyleSetOperation
   | TextSetOperation
   | AttributeSetOperation
   | ElementHideOperation
-  | ElementShowOperation;
+  | ElementShowOperation
+  | ElementInsertOperation
+  | ElementRemoveOperation;
 
 export interface PatchVersion {
   version: number;

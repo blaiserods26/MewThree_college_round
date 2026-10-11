@@ -211,7 +211,27 @@ export async function runPatchVerificationDirect(
 
       // Assertion A: Target existence and uniqueness
       const targetMatches = await page.locator(selector).count();
-      if (targetMatches === 1) {
+      if (patch.operation.type === "element.remove") {
+        if (targetMatches === 0) {
+          allAssertions.push({
+            assertionId: `${vp.name.toLowerCase()}-target-unique`,
+            passed: true,
+            actualValue: "Target element cleanly detached from DOM",
+          });
+          allAssertions.push({
+            assertionId: `${vp.name.toLowerCase()}-element-removed`,
+            passed: true,
+            actualValue: "Element successfully removed by patch",
+          });
+        } else {
+          viewportPassed = false;
+          allAssertions.push({
+            assertionId: `${vp.name.toLowerCase()}-element-removed`,
+            passed: false,
+            errorMessage: `Target element '${selector}' remains in DOM after element.remove operation.`,
+          });
+        }
+      } else if (targetMatches === 1) {
         allAssertions.push({
           assertionId: `${vp.name.toLowerCase()}-target-unique`,
           passed: true,
@@ -344,6 +364,23 @@ export async function runPatchVerificationDirect(
               assertionId: `${vp.name.toLowerCase()}-element-visible`,
               passed: false,
               errorMessage: "Element is hidden despite element.show operation.",
+            });
+          }
+        } else if (patch.operation.type === "element.insert") {
+          const insertedLoc = page.locator(`[data-patchwork-inserted="${patch.id}"]`);
+          const count = await insertedLoc.count();
+          if (count > 0) {
+            allAssertions.push({
+              assertionId: `${vp.name.toLowerCase()}-element-inserted`,
+              passed: true,
+              actualValue: `Inserted element present in DOM (${count} found)`,
+            });
+          } else {
+            viewportPassed = false;
+            allAssertions.push({
+              assertionId: `${vp.name.toLowerCase()}-element-inserted`,
+              passed: false,
+              errorMessage: `Inserted element with data-patchwork-inserted="${patch.id}" not found in DOM.`,
             });
           }
         }
