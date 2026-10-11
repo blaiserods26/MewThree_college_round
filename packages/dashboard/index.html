@@ -28,16 +28,16 @@
         <div class="viewport-controls-toolbar">
           <div class="btn-group viewport-btn-group">
             <button id="btn-vp-desktop" class="vp-btn active" type="button" title="Desktop Viewport (1280px)">
-              <i data-lucide="monitor" style="width:14px;height:14px;"></i> 1280px
+              <i data-lucide="monitor" style="width:14px;height:14px;"></i><span>1280px</span>
             </button>
             <button id="btn-vp-tablet" class="vp-btn" type="button" title="Tablet Viewport (768px)">
-              <i data-lucide="tablet" style="width:14px;height:14px;"></i> 768px
+              <i data-lucide="tablet" style="width:14px;height:14px;"></i><span>768px</span>
             </button>
             <button id="btn-vp-mobile" class="vp-btn" type="button" title="Mobile Viewport (375px)">
-              <i data-lucide="smartphone" style="width:14px;height:14px;"></i> 375px
+              <i data-lucide="smartphone" style="width:14px;height:14px;"></i><span>375px</span>
             </button>
             <button id="btn-vp-fill" class="vp-btn" type="button" title="Responsive Fill Width (100%)">
-              <i data-lucide="maximize" style="width:14px;height:14px;"></i> Auto
+              <i data-lucide="maximize" style="width:14px;height:14px;"></i><span>Auto</span>
             </button>
           </div>
           <span id="canvas-dimensions-label" class="canvas-dim-badge">1280 × 800</span>
@@ -50,13 +50,13 @@
           <span id="connection-status-text">Engine Online (Port 4000)</span>
         </div>
         <button id="open-inspector-btn" class="btn btn-secondary" type="button">
-          <i data-lucide="search" style="width:16px;height:16px;"></i> Visual Inspector
+          <i data-lucide="search" style="width:16px;height:16px;"></i><span>Visual Inspector</span>
         </button>
         <button id="open-ai-copilot-btn" class="btn btn-ai" type="button">
-          <i data-lucide="sparkles" style="width:16px;height:16px;"></i> AI Hotfix Copilot
+          <i data-lucide="sparkles" style="width:16px;height:16px;"></i><span>AI Hotfix Copilot</span>
         </button>
         <button id="create-patch-btn" class="btn btn-primary" type="button">
-          <i data-lucide="plus-circle" style="width:16px;height:16px;"></i> New Patch Draft
+          <i data-lucide="plus-circle" style="width:16px;height:16px;"></i><span>New Patch Draft</span>
         </button>
       </div>
     </header>
@@ -101,8 +101,7 @@
             <div class="studio-canvas-toolbar">
               <div class="canvas-bar-left">
                 <button id="btn-toggle-studio-inspector" class="btn btn-inspect" type="button">
-                  <i data-lucide="crosshair" style="width:15px;height:15px;"></i>
-                  <span id="studio-inspect-btn-text">Select Element on Canvas</span>
+                  <i data-lucide="crosshair" style="width:15px;height:15px;"></i><span id="studio-inspect-btn-text">Select Element on Canvas</span>
                 </button>
                 <div class="canvas-url-bar">
                   <span class="url-lock"><i data-lucide="lock" style="width:12px;height:12px;"></i></span>
@@ -216,10 +215,10 @@
 
                 <div class="inspector-action-buttons">
                   <button id="btn-studio-preview-patch" class="btn btn-secondary" type="button" title="Apply change directly to canvas in isolated preview">
-                    <i data-lucide="eye" style="width:14px;height:14px;"></i> Live Preview
+                    <i data-lucide="eye" style="width:14px;height:14px;"></i><span>Live Preview</span>
                   </button>
                   <button id="btn-studio-reset-preview" class="btn btn-secondary" type="button" title="Revert canvas to original unpatched baseline">
-                    <i data-lucide="rotate-ccw" style="width:14px;height:14px;"></i> Reset
+                    <i data-lucide="rotate-ccw" style="width:14px;height:14px;"></i><span>Reset</span>
                   </button>
                 </div>
               </div>
@@ -227,10 +226,10 @@
               <!-- Verification & Publication Actions -->
               <div class="inspector-section inspector-footer-actions">
                 <button id="btn-studio-verify-patch" class="btn btn-secondary" type="button" style="width: 100%; margin-bottom: 8px;">
-                  <i data-lucide="zap" style="width:14px;height:14px;"></i> Run Verification
+                  <i data-lucide="zap" style="width:14px;height:14px;"></i><span>Run Verification</span>
                 </button>
                 <button id="btn-studio-save-patch" class="btn btn-primary" type="button" style="width: 100%;">
-                  <i data-lucide="save" style="width:14px;height:14px;"></i> Save & Publish Hotfix
+                  <i data-lucide="save" style="width:14px;height:14px;"></i><span>Save & Publish Hotfix</span>
                 </button>
               </div>
             </div>
@@ -284,7 +283,7 @@
               <p style="font-size: 0.85rem; color: var(--text-faint); margin: 0;">Bundle verified patches into immutable, versioned production releases with instant 1-click rollback.</p>
             </div>
             <button id="open-release-modal-btn" class="btn btn-primary" type="button" style="display: flex; align-items: center; gap: 8px;">
-              <i data-lucide="rocket" style="width:16px;height:16px;"></i> Create Release Bundle
+              <i data-lucide="rocket" style="width:16px;height:16px;"></i><span>Create Release Bundle</span>
             </button>
           </div>
 
@@ -299,7 +298,7 @@
             </div>
             <div class="active-release-actions">
               <button id="trigger-rollback-btn" class="btn btn-danger" type="button">
-                <i data-lucide="zap" style="width:16px;height:16px;"></i> Rollback to Previous Release
+                <i data-lucide="zap" style="width:16px;height:16px;"></i><span>Rollback to Previous Release</span>
               </button>
             </div>
           </div>
@@ -325,7 +324,7 @@
               <p style="font-size: 0.85rem; color: var(--text-faint); margin: 0;">Automated continuous observable checks for live storefront DOM drift, element presence, and regression detection.</p>
             </div>
             <button id="btn-run-health-check" class="btn btn-primary" type="button" style="display: flex; align-items: center; gap: 8px;">
-              <i data-lucide="activity" style="width:16px;height:16px;"></i> Run Live Health Check
+              <i data-lucide="activity" style="width:16px;height:16px;"></i><span>Run Live Health Check</span>
             </button>
           </div>
 
@@ -337,7 +336,7 @@
             </div>
             <div class="active-release-actions">
               <button id="health-rollback-btn" class="btn btn-danger hidden" type="button">
-                <i data-lucide="alert-triangle" style="width:16px;height:16px;"></i> Safe 1-Click Rollback
+                <i data-lucide="alert-triangle" style="width:16px;height:16px;"></i><span>Safe 1-Click Rollback</span>
               </button>
             </div>
           </div>
@@ -446,7 +445,7 @@
           <div class="modal-footer">
             <button id="cancel-release-modal-btn" class="btn btn-secondary" type="button">Cancel</button>
             <button id="submit-release-bundle-btn" class="btn btn-primary" type="submit" disabled>
-              <i data-lucide="rocket" style="width:16px;height:16px;"></i> Publish Release Bundle
+              <i data-lucide="rocket" style="width:16px;height:16px;"></i><span>Publish Release Bundle</span>
             </button>
           </div>
         </form>
@@ -482,7 +481,7 @@
 
           <div style="display: flex; justify-content: flex-end;">
             <button id="ai-generate-btn" class="btn btn-ai" type="button">
-              <i data-lucide="sparkles" style="width:16px;height:16px;"></i> Generate Patch Proposal
+              <i data-lucide="sparkles" style="width:16px;height:16px;"></i><span>Generate Patch Proposal</span>
             </button>
           </div>
 
@@ -533,7 +532,7 @@
           <div class="modal-footer">
             <button id="cancel-ai-copilot-btn" class="btn btn-secondary" type="button">Cancel</button>
             <button id="accept-ai-proposal-btn" class="btn btn-primary" type="button" disabled>
-              <i data-lucide="save" style="width:16px;height:16px;"></i> Save as Draft Patch
+              <i data-lucide="save" style="width:16px;height:16px;"></i><span>Save as Draft Patch</span>
             </button>
           </div>
         </form>
