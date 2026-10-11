@@ -5,8 +5,39 @@
   const STOREFRONT_URL = CONFIG.storefrontUrl || "http://localhost:3000";
   const STATE_KEY = "patchwork.dashboard.state.v1";
 
+  // Built-in Lucide SVG map for offline & instant zero-delay rendering without ghost spacing
+  const ICONS = {
+    search: '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>',
+    sparkles: '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>',
+    "plus-circle": '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>',
+    plus: '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>',
+    monitor: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>',
+    tablet: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><line x1="12" x2="12.01" y1="18" y2="18"/></svg>',
+    smartphone: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><line x1="12" x2="12.01" y1="18" y2="18"/></svg>',
+    maximize: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>',
+    layout: '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>',
+    "file-text": '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>',
+    rocket: '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>',
+    activity: '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>',
+    "scroll-text": '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h12a2 2 0 0 0 2-2v-2H10v2a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v3h4"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="M15 8h-5"/><path d="M15 12h-5"/></svg>',
+    crosshair: '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" x2="18" y1="12" y2="12"/><line x1="6" x2="2" y1="12" y2="12"/><line x1="12" x2="12" y1="6" y2="2"/><line x1="12" x2="12" y1="22" y2="18"/></svg>',
+    lock: '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+    "rotate-cw": '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>',
+    "rotate-ccw": '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>',
+    "shield-check": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>',
+    "chevron-up": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>',
+    eye: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>',
+    zap: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+    save: '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>',
+    "alert-triangle": '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>',
+    "arrow-left": '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>',
+    hexagon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>',
+    x: '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>'
+  };
+
   // Targeted helper to refresh Lucide icons without continuous polling intervals
   function refreshIcons(container) {
+    const root = container || document;
     if (window.lucide && typeof window.lucide.createIcons === "function") {
       try {
         window.lucide.createIcons(container ? { root: container } : undefined);
@@ -14,21 +45,37 @@
         // Safe fallback in test or constrained DOM environments
       }
     }
+    // Reliable inline SVG replacement for all data-lucide nodes
+    const iconEls = root.querySelectorAll ? root.querySelectorAll("i[data-lucide]") : [];
+    iconEls.forEach(el => {
+      const name = el.getAttribute("data-lucide");
+      if (ICONS[name]) {
+        const span = document.createElement("span");
+        span.className = "icon-wrapper";
+        span.innerHTML = ICONS[name];
+        el.replaceWith(span);
+      } else if (el.children.length === 0) {
+        el.style.display = "none";
+      }
+    });
   }
 
   function setButtonLabel(btn, text, iconName) {
     if (!btn) return;
     btn.replaceChildren();
-    if (iconName) {
+    if (iconName && ICONS[iconName]) {
+      const span = document.createElement("span");
+      span.className = "icon-wrapper";
+      span.innerHTML = ICONS[iconName];
+      btn.appendChild(span);
+    } else if (iconName) {
       const icon = document.createElement("i");
       icon.setAttribute("data-lucide", iconName);
-      icon.style.width = "14px";
-      icon.style.height = "14px";
-      icon.style.verticalAlign = "text-bottom";
-      icon.style.marginRight = "6px";
       btn.appendChild(icon);
     }
-    btn.appendChild(document.createTextNode(text));
+    const label = document.createElement("span");
+    label.textContent = text;
+    btn.appendChild(label);
     refreshIcons(btn);
   }
 
@@ -1772,27 +1819,27 @@
     if (patch.status === "stale") {
       return `
         ${launchPreviewBtn}
-        <button class="btn btn-warning" id="btn-review-drift" title="Patch target has drifted and requires rebind"><i data-lucide='alert-triangle' style='width:16px;height:16px;color:#fbbf24;vertical-align:text-bottom;'></i> Drift Detected</button>
+        <button class="btn btn-warning" id="btn-review-drift" title="Patch target has drifted and requires rebind"><i data-lucide='alert-triangle' style='width:16px;height:16px;color:#fbbf24;vertical-align:text-bottom;'></i><span>Drift Detected</span></button>
       `;
     }
     if (patch.status === "draft") {
       return `
         ${launchPreviewBtn}
-        <button class="btn btn-secondary" id="btn-simulate-drift" title="Simulate DOM drift"><i data-lucide='zap' style='width:14px;height:14px;vertical-align:text-bottom;'></i> Simulate Drift</button>
-        <button class="btn btn-primary" id="btn-action-verify"><i data-lucide='zap' style='width:14px;height:14px;vertical-align:text-bottom;'></i> Verify with Playwright</button>
+        <button class="btn btn-secondary" id="btn-simulate-drift" title="Simulate DOM drift"><i data-lucide='zap' style='width:14px;height:14px;vertical-align:text-bottom;'></i><span>Simulate Drift</span></button>
+        <button class="btn btn-primary" id="btn-action-verify"><i data-lucide='zap' style='width:14px;height:14px;vertical-align:text-bottom;'></i><span>Verify with Playwright</span></button>
       `;
     }
     if (patch.status === "previewing") {
       return `
         ${launchPreviewBtn}
-        <button class="btn btn-secondary" id="btn-simulate-drift" title="Simulate DOM drift"><i data-lucide='zap' style='width:14px;height:14px;vertical-align:text-bottom;'></i> Simulate Drift</button>
-        <button class="btn btn-primary" id="btn-action-verify"><i data-lucide='zap' style='width:14px;height:14px;vertical-align:text-bottom;'></i> Re-run Verification</button>
+        <button class="btn btn-secondary" id="btn-simulate-drift" title="Simulate DOM drift"><i data-lucide='zap' style='width:14px;height:14px;vertical-align:text-bottom;'></i><span>Simulate Drift</span></button>
+        <button class="btn btn-primary" id="btn-action-verify"><i data-lucide='zap' style='width:14px;height:14px;vertical-align:text-bottom;'></i><span>Re-run Verification</span></button>
       `;
     }
     if (patch.status === "verified") {
       return `
         ${launchPreviewBtn}
-        <button class="btn btn-secondary" id="btn-simulate-drift" title="Simulate DOM drift"><i data-lucide='zap' style='width:14px;height:14px;vertical-align:text-bottom;'></i> Simulate Drift</button>
+        <button class="btn btn-secondary" id="btn-simulate-drift" title="Simulate DOM drift"><i data-lucide='zap' style='width:14px;height:14px;vertical-align:text-bottom;'></i><span>Simulate Drift</span></button>
         <button class="btn btn-success" id="btn-publish-verified">🚀 Publish to Release</button>
       `;
     }
@@ -2350,7 +2397,10 @@
   }
 
   // Initial Boot
+  refreshIcons(document);
   loadPatches();
   loadReleases();
   loadAuditEvents();
+  setTimeout(() => refreshIcons(document), 50);
+  setTimeout(() => refreshIcons(document), 300);
 })();
